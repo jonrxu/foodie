@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import UIKit
 
 final class CoachViewModel: ObservableObject {
     @Published var messages: [ChatMessage] = [
@@ -16,6 +17,9 @@ final class CoachViewModel: ObservableObject {
     @Published var isStreaming: Bool = false
     @Published var streakCount: Int = StreakManager.shared.currentStreak()
     @Published var lastError: String?
+    @Published var showConfetti: Bool = false
+    @Published var sessions: [ChatSession] = []
+    @Published var currentSessionId: UUID?
 
     let quickPrompts: [String] = [
         "Plan my week",
@@ -25,6 +29,7 @@ final class CoachViewModel: ObservableObject {
     ]
 
     private let client = OpenAIClient()
+    private var streamTask: Task<Void, Never>?
 
     private let systemPrompt: String = {
         """
@@ -34,11 +39,19 @@ final class CoachViewModel: ObservableObject {
         - Offer 2-3 swaps for dietary preferences (veg, gluten-free, dairy-free).
         - Keep plans simple: ingredients <= 8 per meal. Include grocery list and prep tips.
         - Be concise; avoid medical claims.
+        - Use simple Markdown for readability: *italics* and **bold** for emphasis, short bullet lists when helpful. No tables.
         """
     }()
 
     func onAppear() {
         streakCount = StreakManager.shared.currentStreak()
+        sessions = ChatStore.shared.loadSessions().sorted(by: { $0.updatedAt > $1.updatedAt })
+        if let first = sessions.first {
+            currentSessionId = first.id
+            messages = first.messages
+        } else {
+            startNewSession()
+        }
     }
 
     func applyQuickPrompt(_ text: String) {
@@ -64,7 +77,8 @@ final class CoachViewModel: ObservableObject {
         isStreaming = true
         lastError = nil
 
-        Task { [weak self] in
+        streamTask?.cancel()
+        streamTask = Task { [weak self] in
             guard let self = self else { return }
             do {
                 try await client.streamChat(systemPrompt: systemPrompt, messages: history) { token in
@@ -75,15 +89,80 @@ final class CoachViewModel: ObservableObject {
                 }
                 await MainActor.run {
                     self.isStreaming = false
-                    self.streakCount = StreakManager.shared.touch()
+                    let previous = self.streakCount
+                    let updated = StreakManager.shared.touch()
+                    self.streakCount = updated
+                    if updated > previous {
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                        self.showConfetti = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                            self.showConfetti = false
+                        }
+                    }
+                    self.streamTask = nil
+                    self.persistCurrentSession()
                 }
             } catch {
-                await MainActor.run {
-                    self.isStreaming = false
-                    self.lastError = error.localizedDescription
+                if error is CancellationError {
+                    await MainActor.run {
+                        self.isStreaming = false
+                        self.streamTask = nil
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isStreaming = false
+                        self.lastError = error.localizedDescription
+                        self.streamTask = nil
+                    }
                 }
             }
         }
+    }
+
+    func cancelStreaming() {
+        streamTask?.cancel()
+        streamTask = nil
+        isStreaming = false
+    }
+
+    func startNewSession() {
+        let welcome = ChatMessage(role: .assistant, content: "Hey! I’m Foodie 🥗 Your friendly coach for building healthy eating habits. What’s your goal today?")
+        messages = [welcome]
+        let session = ChatSession(title: "New chat", messages: messages)
+        sessions.insert(session, at: 0)
+        currentSessionId = session.id
+        ChatStore.shared.saveSessions(sessions)
+    }
+
+    func clearCurrentChat() {
+        guard let id = currentSessionId, let idx = sessions.firstIndex(where: { $0.id == id }) else {
+            startNewSession(); return
+        }
+        let welcome = ChatMessage(role: .assistant, content: "Hey! I’m Foodie 🥗 Your friendly coach for building healthy eating habits. What’s your goal today?")
+        messages = [welcome]
+        sessions[idx].messages = messages
+        sessions[idx].updatedAt = Date()
+        ChatStore.shared.saveSessions(sessions)
+    }
+
+    func loadSession(_ session: ChatSession) {
+        currentSessionId = session.id
+        messages = session.messages
+    }
+
+    private func persistCurrentSession() {
+        let title = messages.first(where: { $0.role == .user })?.content.split(separator: "\n").first.map(String.init) ?? "Chat"
+        if let id = currentSessionId, let idx = sessions.firstIndex(where: { $0.id == id }) {
+            sessions[idx].messages = messages
+            sessions[idx].title = title
+            sessions[idx].updatedAt = Date()
+        } else {
+            let new = ChatSession(title: title, messages: messages)
+            sessions.insert(new, at: 0)
+            currentSessionId = new.id
+        }
+        ChatStore.shared.saveSessions(sessions)
     }
 }
 
