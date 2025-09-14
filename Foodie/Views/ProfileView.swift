@@ -38,7 +38,7 @@ struct ProfileView: View {
                 NavigationLink { Text("Notifications") } label: {
                     Label("Notifications", systemImage: "bell.fill")
                 }
-                NavigationLink { Text("API Key") } label: {
+                NavigationLink { ApiKeySettingsView() } label: {
                     Label("OpenAI API Key", systemImage: "key.fill")
                 }
             }

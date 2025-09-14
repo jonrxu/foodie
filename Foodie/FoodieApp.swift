@@ -12,6 +12,10 @@ struct FoodieApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // Ensure Info.plist privacy strings exist; if not, devs will see system prompt failures.
+                    // NSCameraUsageDescription, NSPhotoLibraryUsageDescription (if library is used)
+                }
         }
     }
 }
