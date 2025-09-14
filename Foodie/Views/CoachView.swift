@@ -15,18 +15,11 @@ struct CoachView: View {
 
     var body: some View {
         ZStack {
-            // Background gradient with playful green vibes
-            LinearGradient(colors: [Color.green.opacity(0.18), Color.teal.opacity(0.12)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea()
-
             VStack(spacing: 0) {
-            header
-            quickChips
-            Divider()
-                .opacity(0.1)
-            chatList
-            inputBar
+                quickChips
+                Divider().opacity(0.06)
+                chatList
+                inputBar
             }
         }
         .onAppear { vm.onAppear() }
@@ -43,62 +36,31 @@ struct CoachView: View {
         } message: {
             Text("This will remove messages in the current chat.")
         }
-        .overlay(alignment: .top) {
-            if vm.showConfetti { ConfettiView().allowsHitTesting(false) }
-        }
-    }
-
-    private var header: some View {
-        ZStack {
-            LinearGradient(colors: [Color.green, Color.teal], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .frame(height: 140)
-                .overlay(alignment: .topTrailing) {
-                    HStack(spacing: 10) {
-                        streakBadge
-                        Button {
-                            showingSessions = true
-                        } label: {
-                            Image(systemName: "text.justify")
-                                .foregroundStyle(.white)
-                                .padding(10)
-                                .background(Color.white.opacity(0.15))
-                                .clipShape(Circle())
-                                .accessibilityLabel("Chats")
-                        }
-                        Button {
-                            showingClearConfirm = true
-                        } label: {
-                            Image(systemName: "trash.fill")
-                                .foregroundStyle(.white)
-                                .padding(10)
-                                .background(Color.white.opacity(0.15))
-                                .clipShape(Circle())
-                                .accessibilityLabel("Clear chat")
-                        }
-                        Button {
-                            showingApiKeySheet = true
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .foregroundStyle(.white)
-                                .padding(10)
-                                .background(Color.white.opacity(0.15))
-                                .clipShape(Circle())
-                        }
-                    }
-                    .padding(.top, 18)
-                    .padding(.trailing, 16)
-                }
-
-            HStack(spacing: 12) {
-                Image(systemName: "leaf.fill")
-                    .foregroundStyle(.white)
-                Text("Foodie Coach")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.white)
+        .overlay(alignment: .top) { if vm.showConfetti { ConfettiView().allowsHitTesting(false) } }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                streakBadge
             }
-            .padding(.top, 12)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showingSessions = true } label: {
+                    Image(systemName: "text.justify")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showingClearConfirm = true } label: {
+                    Image(systemName: "trash.fill")
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showingApiKeySheet = true } label: {
+                    Image(systemName: "gearshape.fill")
+                }
+            }
         }
+        .background(AppTheme.background)
     }
+
+    // Removed heavy header; actions moved to toolbar for a cleaner, minimalist look
 
     private var streakBadge: some View {
         HStack(spacing: 6) {
