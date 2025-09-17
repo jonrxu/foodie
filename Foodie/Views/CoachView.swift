@@ -12,6 +12,7 @@ struct CoachView: View {
     @State private var showingApiKeySheet = false
     @State private var showingSessions = false
     @State private var showingClearConfirm = false
+    @FocusState private var isInputFocused: Bool
 
     var body: some View {
         ZStack {
@@ -82,6 +83,7 @@ struct CoachView: View {
                 ForEach(vm.quickPrompts, id: \.self) { text in
                     Button {
                         vm.applyQuickPrompt(text)
+                        isInputFocused = true
                     } label: {
                         HStack(spacing: 6) {
                             Text(text)
@@ -109,7 +111,11 @@ struct CoachView: View {
                             .id(message.id)
                     }
                 }
+                .padding(.bottom, 4)
             }
+            .applyInteractiveKeyboardDismiss()
+            .contentShape(Rectangle())
+            .onTapGesture { isInputFocused = false }
             .onChange(of: vm.messages.count) { old, new in
                 if let last = vm.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
             }
@@ -122,6 +128,12 @@ struct CoachView: View {
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...4)
                 .disabled(vm.isStreaming)
+                .focused($isInputFocused)
+                .submitLabel(.send)
+                .onSubmit {
+                    isInputFocused = false
+                    vm.sendCurrentInput()
+                }
 
             if vm.isStreaming {
                 Button(action: { vm.cancelStreaming() }) {
@@ -133,7 +145,10 @@ struct CoachView: View {
                         .accessibilityLabel("Stop response")
                 }
             } else {
-                Button(action: vm.sendCurrentInput) {
+                Button {
+                    isInputFocused = false
+                    vm.sendCurrentInput()
+                } label: {
                     Image(systemName: "paperplane.fill")
                         .foregroundStyle(.white)
                         .padding(10)
@@ -243,8 +258,21 @@ private struct ApiKeySheet: View {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func applyInteractiveKeyboardDismiss() -> some View {
+        #if os(iOS)
+        if #available(iOS 16.0, *) {
+            self.scrollDismissesKeyboard(.interactively)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+}
+
 #Preview {
     CoachView()
 }
-
-

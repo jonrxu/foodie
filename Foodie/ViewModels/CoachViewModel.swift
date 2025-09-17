@@ -31,7 +31,7 @@ final class CoachViewModel: ObservableObject {
     private let client = OpenAIClient()
     private var streamTask: Task<Void, Never>?
 
-    private let systemPrompt: String = {
+    private let baseSystemPrompt: String = {
         """
         You are Foodie, a friendly nutrition coach. Goals: improve healthy eating with realistic, budget-aware, time-aware advice. Always:
         - Ask 1 clarifying question only if needed.
@@ -81,7 +81,8 @@ final class CoachViewModel: ObservableObject {
         streamTask = Task { [weak self] in
             guard let self = self else { return }
             do {
-                try await client.streamChat(systemPrompt: systemPrompt, messages: history) { token in
+                let prompt = self.dynamicSystemPrompt()
+                try await client.streamChat(systemPrompt: prompt, messages: history) { token in
                     DispatchQueue.main.async {
                         guard let idx = self.messages.lastIndex(where: { $0.role == .assistant }) else { return }
                         self.messages[idx].content.append(token)
@@ -166,4 +167,56 @@ final class CoachViewModel: ObservableObject {
     }
 }
 
+extension CoachViewModel {
+    private func dynamicSystemPrompt() -> String {
+        // Include recent meal history so the model can tailor recommendations without revealing the context in the chat transcript.
+        var prompt = baseSystemPrompt
+        let context = foodLogContext()
+        if !context.isEmpty {
+            prompt += "\n\nUser meal log context for personalized advice:\n" + context
+        }
+        return prompt
+    }
 
+    private func foodLogContext() -> String {
+        let logs = FoodLogStore.shared.load()
+        guard logs.isEmpty == false else { return "" }
+
+        let calendar = Calendar.current
+        let groups = Dictionary(grouping: logs) { calendar.startOfDay(for: $0.date) }
+        let sortedDays = groups.keys.sorted(by: { $0 > $1 }).prefix(3)
+
+        var sections: [String] = []
+        for day in sortedDays {
+            guard let entries = groups[day]?.sorted(by: { $0.date < $1.date }) else { continue }
+            let header: String
+            if calendar.isDateInToday(day) {
+                header = "Today (" + Self.dayFormatter.string(from: day) + ")"
+            } else if calendar.isDateInYesterday(day) {
+                header = "Yesterday (" + Self.dayFormatter.string(from: day) + ")"
+            } else {
+                header = Self.dayFormatter.string(from: day)
+            }
+
+            let lines = entries.map { entry -> String in
+                let time = Self.timeFormatter.string(from: entry.date)
+                return "- \(time): \(entry.summary)"
+            }
+            sections.append(([header] + lines).joined(separator: "\n"))
+        }
+
+        return sections.joined(separator: "\n\n")
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
+}
