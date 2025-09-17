@@ -10,9 +10,8 @@ import SwiftUI
 struct FoodLogView: View {
     @State private var showingCamera = false
     @State private var showingLibrary = false
-    @State private var isAnalyzing = false
-    @State private var draftSummary: String = ""
-    @State private var pendingImage: UIImage?
+    @State private var activeAnalyses = 0
+    @State private var errorMessage: String?
     @State private var logs: [FoodLogEntry] = FoodLogStore.shared.load().sorted(by: { $0.date > $1.date })
 
     var body: some View {
@@ -26,22 +25,20 @@ struct FoodLogView: View {
         .background(AppTheme.background)
         .sheet(isPresented: $showingCamera) {
             ImagePicker(source: .camera) { image in
-                pendingImage = image
-                Task { await analyzePendingImage() }
+                Task { await analyzeImage(image) }
             }
         }
         .sheet(isPresented: $showingLibrary) {
             ImagePicker(source: .library) { image in
-                pendingImage = image
-                Task { await analyzePendingImage() }
+                Task { await analyzeImage(image) }
             }
         }
-        .alert("Save this entry?", isPresented: Binding(get: { !draftSummary.isEmpty && !isAnalyzing }, set: { _ in })) {
-            Button("Edit") { }
-            Button("Save") { saveDraft() }
-            Button("Discard", role: .destructive) { draftSummary = ""; pendingImage = nil }
+        .alert("Analysis Failed", isPresented: Binding(get: { errorMessage != nil }, set: { newValue in
+            if !newValue { errorMessage = nil }
+        })) {
+            Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
-            Text(draftSummary)
+            Text(errorMessage ?? "")
         }
     }
 
@@ -78,7 +75,7 @@ struct FoodLogView: View {
                     .background(AppTheme.card)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            if isAnalyzing {
+            if activeAnalyses > 0 {
                 ProgressView().progressViewStyle(.circular)
             }
             Spacer()
@@ -87,8 +84,6 @@ struct FoodLogView: View {
 
     private var gallery: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recent")
-                .font(.headline)
             if logs.isEmpty {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(AppTheme.card)
@@ -104,54 +99,75 @@ struct FoodLogView: View {
                         }
                     }
             } else {
-                ForEach(logs) { entry in
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Image(systemName: "fork.knife")
-                            .foregroundStyle(AppTheme.primary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.summary)
-                                .font(.body)
-                            Text(entry.date, style: .date)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                ForEach(groupedLogs, id: \.date) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(dayLabel(for: group.date))
+                            .font(.headline)
+                        ForEach(group.entries) { entry in
+                            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                Image(systemName: "fork.knife")
+                                    .foregroundStyle(AppTheme.primary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(entry.summary)
+                                        .font(.body)
+                                    Text(entry.date, style: .time)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(AppTheme.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
-                        Spacer()
                     }
-                    .padding(12)
-                    .background(AppTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }
     }
 
-    private func analyzePendingImage() async {
-        guard let uiImage = pendingImage, let data = uiImage.jpegData(compressionQuality: 0.8) else { return }
-        isAnalyzing = true
-        defer { isAnalyzing = false }
+    private func analyzeImage(_ image: UIImage) async {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
+        await MainActor.run { activeAnalyses += 1 }
         do {
             let result = try await OpenAIClient().analyzeFoodImage(imageData: data)
             await MainActor.run {
-                draftSummary = result.summary
+                let newEntry = FoodLogEntry(summary: result.summary,
+                                             confidence: result.confidence,
+                                             mealType: result.mealType)
+                logs.insert(newEntry, at: 0)
+                logs.sort(by: { $0.date > $1.date })
+                FoodLogStore.shared.save(logs)
             }
         } catch {
-            await MainActor.run { draftSummary = "Couldn’t analyze the photo. Please try again." }
+            await MainActor.run {
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? "Couldn’t analyze the photo. Please try again."
+            }
         }
-        pendingImage = nil // always discard image
+        await MainActor.run {
+            activeAnalyses = max(activeAnalyses - 1, 0)
+        }
     }
 
-    private func saveDraft() {
-        guard !draftSummary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { draftSummary = ""; return }
-        var current = FoodLogStore.shared.load()
-        current.insert(FoodLogEntry(summary: draftSummary), at: 0)
-        FoodLogStore.shared.save(current)
-        logs = current
-        draftSummary = ""
+    private var groupedLogs: [(date: Date, entries: [FoodLogEntry])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: logs) { calendar.startOfDay(for: $0.date) }
+        return grouped
+            .map { (date: $0.key, entries: $0.value.sorted(by: { $0.date > $1.date })) }
+            .sorted(by: { $0.date > $1.date })
     }
+
+    private func dayLabel(for date: Date) -> String {
+        Self.dayFormatter.string(from: date)
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
 }
 
 #Preview {
     NavigationStack { FoodLogView() }
 }
-
-
