@@ -216,12 +216,23 @@ struct FoodLogView: View {
     }
 
     private func dayLabel(for date: Date) -> String {
-        Self.dayFormatter.string(from: date)
+        let calendar = Calendar.current
+        if let diff = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: Date())).day,
+           diff > 6 {
+            return Self.longDayFormatter.string(from: date)
+        }
+        return Self.dayFormatter.string(from: date)
     }
 
     private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE"
+        return formatter
+    }()
+
+    private static let longDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d"
         return formatter
     }()
 
@@ -316,7 +327,7 @@ struct FoodLogView: View {
 
     private func entryRow(for entry: FoodLogEntry) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            HealthScoreBadge(score: entry.healthIndex)
+            HealthScoreBadge(score: entry.healthIndex, level: entry.healthLevel)
             VStack(alignment: .leading, spacing: 6) {
                 Text(entry.summary)
                     .font(.body)

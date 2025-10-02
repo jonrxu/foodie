@@ -9,12 +9,18 @@ import SwiftUI
 
 struct HealthScoreBadge: View {
     let score: Int?
+    let level: String?
+
+    init(score: Int?, level: String? = nil) {
+        self.score = score
+        self.level = level
+    }
 
     var body: some View {
         VStack(spacing: 6) {
             Text(displayScore)
                 .font(.system(size: 18, weight: .bold))
-            Text("HI")
+            Text(levelDisplay)
                 .font(.caption2)
                 .bold()
         }
@@ -30,9 +36,14 @@ struct HealthScoreBadge: View {
         return "--"
     }
 
+    private var levelDisplay: String {
+        level ?? "HI"
+    }
+
     private var gradient: LinearGradient {
         let colors: [Color]
-        switch score ?? -1 {
+        let value = score ?? -1
+        switch value {
         case 80...100:
             colors = [Color.green.opacity(0.85), Color.teal]
         case 60..<80:
@@ -48,10 +59,10 @@ struct HealthScoreBadge: View {
 
 #Preview {
     HStack(spacing: 16) {
-        HealthScoreBadge(score: 92)
-        HealthScoreBadge(score: 74)
-        HealthScoreBadge(score: 48)
-        HealthScoreBadge(score: nil)
+        HealthScoreBadge(score: 92, level: "A")
+        HealthScoreBadge(score: 74, level: "B")
+        HealthScoreBadge(score: 48, level: "D")
+        HealthScoreBadge(score: nil, level: nil)
     }
     .padding()
     .background(Color(.systemGroupedBackground))

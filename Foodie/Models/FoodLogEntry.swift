@@ -15,6 +15,8 @@ struct FoodLogEntry: Identifiable, Codable, Equatable {
     var confidence: Double?
     var mealType: String?
     var healthIndex: Int?
+    var healthLevel: String?
+    var healthAxes: FoodHealthAssessment.Axes?
     var healthTags: [String]?
     var healthHighlights: [String]?
 
@@ -25,6 +27,8 @@ struct FoodLogEntry: Identifiable, Codable, Equatable {
          confidence: Double? = nil,
          mealType: String? = nil,
          healthIndex: Int? = nil,
+         healthLevel: String? = nil,
+         healthAxes: FoodHealthAssessment.Axes? = nil,
          healthTags: [String]? = nil,
          healthHighlights: [String]? = nil) {
         self.id = id
@@ -34,8 +38,16 @@ struct FoodLogEntry: Identifiable, Codable, Equatable {
         self.confidence = confidence
         self.mealType = mealType
         self.healthIndex = healthIndex
+        self.healthLevel = healthLevel
+        self.healthAxes = healthAxes
         self.healthTags = healthTags
         self.healthHighlights = healthHighlights
+    }
+}
+
+extension FoodLogEntry {
+    static func == (lhs: FoodLogEntry, rhs: FoodLogEntry) -> Bool {
+        lhs.id == rhs.id
     }
 }
 

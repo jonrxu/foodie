@@ -91,17 +91,11 @@ extension OpenAIClient {
         let estimatedCalories: Int?
         let confidence: Double?
         let mealType: String?
-
-        private enum CodingKeys: String, CodingKey { case detected, summary, estimatedCalories, confidence, mealType }
-
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            detected = try container.decodeIfPresent(Bool.self, forKey: .detected) ?? true
-            summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
-            estimatedCalories = try container.decodeIfPresent(Int.self, forKey: .estimatedCalories)
-            confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
-            mealType = try container.decodeIfPresent(String.self, forKey: .mealType)
-        }
+        let score: Int?
+        let level: String?
+        let axes: FoodHealthAssessment.Axes?
+        let tags: [String]?
+        let highlights: [String]?
     }
 
     // Sends an image (as base64 data URL) and asks for a single concise sentence summary.
@@ -130,7 +124,7 @@ extension OpenAIClient {
             }
         }
 
-        let systemText = "You are a precise meal logger. Decide if the image clearly contains food or drink. Respond strictly as JSON with keys: detected (boolean), summary (string), estimatedCalories (integer kcal or null), confidence (0–1 or null), mealType (string like breakfast/lunch/dinner or null).\nIf no meal/drink is visible, set detected=false and return summary='' with other values null. When detected=true, return ONE concise sentence that includes item/brand, plain-English portion/size, and an estimated calorie count. Example: 'Lay's Classic chips, regular bag (~28 g), estimated calories 160 kcal'. No uncertainty words, no ranges, no emojis, no advice, <=140 characters."
+        let systemText = "You analyze meal photos. Return strict JSON: {detected, summary, items, estimatedCalories, confidence, mealType, score, level, axes, tags, highlights}.\nIf no edible food/drink is visible set detected=false and set other fields null or empty arrays. When detected=true: summary should concisely describe only the edible items with portion hints; items must be an array of canonical edible components (ignore utensils, plates, bowls, cups unless they are edible); estimatedCalories integer or null; confidence float 0-1 or null; mealType string like breakfast/lunch/dinner or null; score integer 0-100; level single uppercase letter A-E; axes object with integer fields nutrientDensity, processing, sugarLoad, saturatedFat, sodium, positives (each 0-100); tags array of lowercase snake_case strings; highlights array of 2-3 short phrases explaining key drivers. No extra keys, no prose, no uncertainty language."
 
         let messages: [RequestMessage] = [
             .init(role: "system", content: [.init(type: "text", text: systemText, image_url: nil)]),
@@ -165,6 +159,74 @@ extension OpenAIClient {
             throw OpenAIError.badResponse
         }
         return try JSONDecoder().decode(FoodAnalysisResult.self, from: jsonData)
+    }
+
+    struct FoodClassification: Decodable {
+        let score: Int
+        let level: String
+        let axes: Axes
+        let tags: [String]
+        let highlights: [String]
+
+        struct Axes: Decodable {
+            let nutrientDensity: Int
+            let processing: Int
+            let sugarLoad: Int
+            let saturatedFat: Int
+            let sodium: Int
+            let positives: Int
+        }
+    }
+
+    func classifyFood(summary: String) async throws -> FoodClassification {
+        guard let apiKey = ApiKeyStore.shared.getApiKey() else {
+            throw OpenAIError.missingApiKey
+        }
+
+        let url = URL(string: "https://api.openai.com/v1/chat/completions")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        struct Message: Encodable { let role: String; let content: String }
+
+        let systemPrompt = "You classify meals. Return strict JSON with fields: score (0-100), level (A-E), axes (nutrientDensity, processing, sugarLoad, saturatedFat, sodium, positives each 0-100), tags (array lowercase snake_case), highlights (array of short phrases)." +
+        " Score higher for nutrient-dense, minimally processed foods; lower for ultra-processed, fried, sugary, high sodium, high saturated fat items." +
+        " Axes represent individual dimensions: nutrientDensity (higher better), processing (higher worse), sugarLoad (higher worse), saturatedFat (higher worse), sodium (higher worse), positives (higher better)." +
+        " Level must be a single uppercase letter A (best) through E (worst). Tags capture notable attributes. Highlights explain top 2-3 drivers." +
+        " Respond with valid JSON only. No extra commentary or fields."
+
+        let messages = [
+            Message(role: "system", content: systemPrompt),
+            Message(role: "user", content: "Meal summary: \(summary)")
+        ]
+
+        struct Body: Encodable {
+            let model: String
+            let temperature: Double
+            let messages: [Message]
+            let response_format: ResponseFormat
+            struct ResponseFormat: Encodable { let type: String }
+        }
+
+        let body = Body(model: model, temperature: 0.2, messages: messages, response_format: .init(type: "json_object"))
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw OpenAIError.badResponse
+        }
+
+        struct CompletionResponse: Decodable {
+            struct Choice: Decodable { struct Message: Decodable { let content: String }; let message: Message }
+            let choices: [Choice]
+        }
+        let decoded = try JSONDecoder().decode(CompletionResponse.self, from: data)
+        guard let content = decoded.choices.first?.message.content, let jsonData = content.data(using: .utf8) else {
+            throw OpenAIError.badResponse
+        }
+        return try JSONDecoder().decode(FoodClassification.self, from: jsonData)
     }
 }
 

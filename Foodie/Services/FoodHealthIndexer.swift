@@ -16,11 +16,28 @@ final class FoodHealthIndexer {
         if let cached = cache.value(for: summary) {
             return cached
         }
-
-        let analyzer = FoodHealthAnalyzer(summary: summary)
-        let assessment = try analyzer.compute()
-        cache.store(assessment, for: summary)
-        return assessment
+        do {
+            let classified = try await OpenAIClient().classifyFood(summary: summary)
+            let axes = FoodHealthAssessment.Axes(nutrientDensity: classified.axes.nutrientDensity,
+                                                 processing: classified.axes.processing,
+                                                 sugarLoad: classified.axes.sugarLoad,
+                                                 saturatedFat: classified.axes.saturatedFat,
+                                                 sodium: classified.axes.sodium,
+                                                 positives: classified.axes.positives)
+            let assessment = FoodHealthAssessment(score: classified.score,
+                                                 level: classified.level,
+                                                 axes: axes,
+                                                 tags: classified.tags,
+                                                 highlights: classified.highlights)
+            cache.store(assessment, for: summary)
+            return assessment
+        } catch {
+            // Fall back to heuristic analyzer
+            let analyzer = FoodHealthAnalyzer(summary: summary)
+            let assessment = try analyzer.compute()
+            cache.store(assessment, for: summary)
+            return assessment
+        }
     }
 }
 

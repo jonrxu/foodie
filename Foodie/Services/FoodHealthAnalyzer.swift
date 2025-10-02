@@ -78,7 +78,16 @@ struct FoodHealthAnalyzer {
 
         let finalScore = max(0, min(100, healthScore))
 
+        let nutrientDensityScore = Int((scoreComponents.values.reduce(0, +) / 0.57).clamped(to: 0...1) * 100)
+        let axes = FoodHealthAssessment.Axes(nutrientDensity: nutrientDensityScore,
+                                             processing: lowered.containsAny(of: Keys.ultraProcessed) ? 80 : 15,
+                                             sugarLoad: lowered.containsAny(of: Keys.sugary) ? 75 : 10,
+                                             saturatedFat: lowered.containsAny(of: Keys.saturatedFat) ? 70 : 25,
+                                             sodium: lowered.containsAny(of: Keys.highSodium) ? 70 : 25,
+                                             positives: nutrientDensityScore)
         return FoodHealthAssessment(score: finalScore,
+                                    level: "C",
+                                    axes: axes,
                                     tags: Array(tags).sorted(),
                                     highlights: Array(highlights.prefix(3)))
     }
