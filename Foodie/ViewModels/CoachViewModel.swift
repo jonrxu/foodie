@@ -188,6 +188,16 @@ extension CoachViewModel {
             prompt += "\n\nUser dietary preferences (keep in mind when planning):\n" + preferences
         }
 
+        let cuisines = UserPreferencesStore.shared.loadFavoriteCuisines()
+        if cuisines.isEmpty == false {
+            prompt += "\n\nUser favorite cuisines and flavor notes:\n" + cuisines
+        }
+
+        let budget = UserPreferencesStore.shared.loadBudgetPreferences()
+        if budget.isEmpty == false {
+            prompt += "\n\nUser budget & time constraints:\n" + budget
+        }
+
         let context = foodLogContext()
         if !context.isEmpty {
             prompt += "\n\nUser meal log context for personalized advice:\n" + context
