@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @State private var displayName: String = UserPreferencesStore.shared.loadDisplayName()
+
     var body: some View {
         Form {
             Section("Account") {
@@ -16,9 +18,15 @@ struct ProfileView: View {
                         .font(.system(size: 36))
                         .foregroundStyle(AppTheme.primary)
                     VStack(alignment: .leading) {
-                        Text("Your Name").font(.headline)
+                        TextField("Your Name", text: $displayName)
+                            .font(.headline)
+                            .textInputAutocapitalization(.words)
+                            .disableAutocorrection(true)
                         Text("Premium • Streak 7").foregroundStyle(.secondary)
                     }
+                }
+                .onDisappear {
+                    UserPreferencesStore.shared.saveDisplayName(displayName)
                 }
             }
 
@@ -35,7 +43,7 @@ struct ProfileView: View {
             }
 
             Section("Settings") {
-                NavigationLink { Text("Notifications") } label: {
+                NavigationLink { NotificationsView() } label: {
                     Label("Notifications", systemImage: "bell.fill")
                 }
                 NavigationLink { ApiKeySettingsView() } label: {
@@ -45,11 +53,34 @@ struct ProfileView: View {
         }
         .scrollContentBackground(.automatic)
         .background(AppTheme.background)
+        .onDisappear {
+            UserPreferencesStore.shared.saveDisplayName(displayName)
+        }
     }
 }
 
 #Preview {
     NavigationStack { ProfileView() }
+}
+
+struct NotificationsView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "bell.slash.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("No notifications right now")
+                .font(.title3).bold()
+            Text("Stay tuned—Foodie will let you know when important updates arrive.")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(AppTheme.background)
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 }
 
 struct DietaryPreferencesView: View {

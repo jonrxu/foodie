@@ -106,7 +106,7 @@ final class CoachViewModel: ObservableObject {
                     self.persistCurrentSession()
                 }
             } catch {
-                if error is CancellationError {
+                if Self.isCancellation(error) {
                     await MainActor.run {
                         self.isStreaming = false
                         self.streamTask = nil
@@ -180,9 +180,22 @@ final class CoachViewModel: ObservableObject {
 }
 
 extension CoachViewModel {
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return true }
+        return false
+    }
+
     private func dynamicSystemPrompt() -> String {
         // Include recent meal history so the model can tailor recommendations without revealing the context in the chat transcript.
         var prompt = baseSystemPrompt
+        let displayName = UserPreferencesStore.shared.loadDisplayName().trimmingCharacters(in: .whitespacesAndNewlines)
+        if let firstName = displayName.split(whereSeparator: { $0.isWhitespace }).first.map(String.init), firstName.isEmpty == false {
+            prompt += "\n\nWhen addressing the user, prefer their first name (" + firstName + ") and use it the first time you mention them and sparingly thereafter for warmth."
+        }
+
         let preferences = UserPreferencesStore.shared.loadDietaryPreferences()
         if preferences.isEmpty == false {
             prompt += "\n\nUser dietary preferences (keep in mind when planning):\n" + preferences

@@ -13,6 +13,7 @@ final class UserPreferencesStore {
     private let dietaryKey = "USER_DIETARY_PREFERENCES"
     private let cuisinesKey = "USER_FAVORITE_CUISINES"
     private let budgetKey = "USER_BUDGET_TIME_PREFS"
+    private let displayNameKey = "USER_DISPLAY_NAME"
 
     func loadDietaryPreferences() -> String {
         UserDefaults.standard.string(forKey: dietaryKey) ?? ""
@@ -51,5 +52,18 @@ final class UserPreferencesStore {
 
     func clearBudgetPreferences() {
         UserDefaults.standard.removeObject(forKey: budgetKey)
+    }
+
+    func loadDisplayName() -> String {
+        UserDefaults.standard.string(forKey: displayNameKey) ?? ""
+    }
+
+    func saveDisplayName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        UserDefaults.standard.set(trimmed, forKey: displayNameKey)
+    }
+
+    func clearDisplayName() {
+        UserDefaults.standard.removeObject(forKey: displayNameKey)
     }
 }
