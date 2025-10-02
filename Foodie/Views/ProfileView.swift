@@ -23,7 +23,7 @@ struct ProfileView: View {
             }
 
             Section("Preferences") {
-                NavigationLink { Text("Dietary Preferences") } label: {
+                NavigationLink { DietaryPreferencesView() } label: {
                     Label("Dietary Preferences", systemImage: "leaf.fill")
                 }
                 NavigationLink { Text("Cuisines") } label: {
@@ -50,6 +50,55 @@ struct ProfileView: View {
 
 #Preview {
     NavigationStack { ProfileView() }
+}
+
+struct DietaryPreferencesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var text: String = UserPreferencesStore.shared.loadDietaryPreferences()
+    @State private var savedText: String = UserPreferencesStore.shared.loadDietaryPreferences()
+
+    private var isDirty: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines) != savedText
+    }
+
+    var body: some View {
+        Form {
+            Section("Let Foodie know your dietary needs") {
+                TextEditor(text: $text)
+                    .frame(minHeight: 180)
+                    .textInputAutocapitalization(.sentences)
+                Text("Examples: vegetarian weekdays, low sodium, allergic to peanuts, hate mushrooms.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Dietary Preferences")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Close") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    UserPreferencesStore.shared.saveDietaryPreferences(trimmed)
+                    savedText = trimmed
+                    dismiss()
+                }
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !isDirty)
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Button(role: .destructive) {
+                    text = ""
+                    UserPreferencesStore.shared.clearDietaryPreferences()
+                    savedText = ""
+                } label: {
+                    Label("Clear", systemImage: "trash")
+                }
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
 }
 
 

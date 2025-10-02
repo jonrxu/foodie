@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import UIKit
+import SwiftUI
 
 final class CoachViewModel: ObservableObject {
     @Published var messages: [ChatMessage] = [
@@ -152,6 +153,17 @@ final class CoachViewModel: ObservableObject {
         messages = session.messages
     }
 
+    func deleteSession(_ session: ChatSession) {
+        guard let idx = sessions.firstIndex(where: { $0.id == session.id }) else { return }
+        withAnimation(.easeInOut) {
+            sessions.remove(at: idx)
+        }
+        ChatStore.shared.saveSessions(sessions)
+        if currentSessionId == session.id {
+            startNewSession()
+        }
+    }
+
     private func persistCurrentSession() {
         let title = messages.first(where: { $0.role == .user })?.content.split(separator: "\n").first.map(String.init) ?? "Chat"
         if let id = currentSessionId, let idx = sessions.firstIndex(where: { $0.id == id }) {
@@ -171,6 +183,11 @@ extension CoachViewModel {
     private func dynamicSystemPrompt() -> String {
         // Include recent meal history so the model can tailor recommendations without revealing the context in the chat transcript.
         var prompt = baseSystemPrompt
+        let preferences = UserPreferencesStore.shared.loadDietaryPreferences()
+        if preferences.isEmpty == false {
+            prompt += "\n\nUser dietary preferences (keep in mind when planning):\n" + preferences
+        }
+
         let context = foodLogContext()
         if !context.isEmpty {
             prompt += "\n\nUser meal log context for personalized advice:\n" + context
@@ -220,3 +237,4 @@ extension CoachViewModel {
         return formatter
     }()
 }
+

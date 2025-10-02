@@ -10,7 +10,6 @@ import SwiftUI
 struct CoachView: View {
     @StateObject private var vm = CoachViewModel()
     @State private var showingSessions = false
-    @State private var showingClearConfirm = false
     @FocusState private var isInputFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
 
@@ -30,23 +29,23 @@ struct CoachView: View {
         } message: {
             Text(vm.lastError ?? "Unknown error")
         }
-        .alert("Clear chat?", isPresented: $showingClearConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) { vm.clearCurrentChat() }
-        } message: {
-            Text("This will remove messages in the current chat.")
-        }
         .overlay(alignment: .top) { if vm.showConfetti { ConfettiView().allowsHitTesting(false) } }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingSessions = true } label: {
-                    Image(systemName: "text.justify")
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    showingSessions = true
+                } label: {
+                    Label("Chats", systemImage: "text.justify")
+                        .labelStyle(.titleAndIcon)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingClearConfirm = true } label: {
-                    Image(systemName: "trash.fill")
+                Button {
+                    vm.startNewSession()
+                } label: {
+                    Image(systemName: "plus")
                 }
+                .accessibilityLabel("New chat")
             }
         }
         .background(AppTheme.background)
@@ -228,16 +227,28 @@ private struct SessionsSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                vm.deleteSession(session)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
             .navigationTitle("Your Chats")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("New Chat") { vm.startNewSession(); dismiss() }
-                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        vm.startNewSession()
+                        dismiss()
+                    } label: {
+                        Label("New Chat", systemImage: "plus")
+                    }
                 }
             }
         }
