@@ -21,6 +21,10 @@ final class ApiKeyStore {
             return envKey
         }
 
+        if let defaultKey = AppConfig.defaultOpenAIKey, !defaultKey.isEmpty {
+            return defaultKey
+        }
+
         if let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
            let data = try? Data(contentsOf: url),
            let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],

@@ -131,7 +131,7 @@ struct MessageBubble: View {
     private var bubbleBackground: some View {
         Group {
             if isUser {
-                LinearGradient(colors: [Color.blue, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Rectangle().fill(Color.blue)
             } else {
                 Rectangle().fill(.ultraThinMaterial)
             }

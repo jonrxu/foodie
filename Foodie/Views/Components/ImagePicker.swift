@@ -20,6 +20,7 @@ struct ImagePicker: UIViewControllerRepresentable {
         case .camera:
             let picker = UIImagePickerController()
             picker.sourceType = .camera
+            picker.modalPresentationStyle = .fullScreen
             picker.delegate = context.coordinator
             picker.allowsEditing = false
             return picker

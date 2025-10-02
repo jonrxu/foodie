@@ -128,7 +128,7 @@ final class CoachViewModel: ObservableObject {
     }
 
     func startNewSession() {
-        let welcome = ChatMessage(role: .assistant, content: "Hey! I’m Foodie 🥗 Your friendly coach for building healthy eating habits. What’s your goal today?")
+        let welcome = ChatMessage(role: .assistant, content: "Hey! I’m Foodie 🍽️ Your friendly coach for building healthy eating habits. What’s your goal today?")
         messages = [welcome]
         let session = ChatSession(title: "New chat", messages: messages)
         sessions.insert(session, at: 0)
@@ -140,7 +140,7 @@ final class CoachViewModel: ObservableObject {
         guard let id = currentSessionId, let idx = sessions.firstIndex(where: { $0.id == id }) else {
             startNewSession(); return
         }
-        let welcome = ChatMessage(role: .assistant, content: "Hey! I’m Foodie 🥗 Your friendly coach for building healthy eating habits. What’s your goal today?")
+        let welcome = ChatMessage(role: .assistant, content: "Hey! I’m Foodie 🍽️ Your friendly coach for building healthy eating habits. What’s your goal today?")
         messages = [welcome]
         sessions[idx].messages = messages
         sessions[idx].updatedAt = Date()

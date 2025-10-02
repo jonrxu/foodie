@@ -12,9 +12,9 @@ struct MealPlanView: View {
         ScrollView {
             VStack(spacing: 16) {
                 header
-                placeholderCard(icon: "cart.fill", title: "Weekly Plan", subtitle: "Auto‑generate a simple plan")
+                placeholderCard(icon: "cart.fill", title: "Weekly Plan", subtitle: "Auto-generate a simple plan")
                 placeholderCard(icon: "list.bullet", title: "Grocery List", subtitle: "Organized by aisle")
-                placeholderCard(icon: "sparkles", title: "Smart Swaps", subtitle: "Dietary and budget‑friendly")
+                placeholderCard(icon: "sparkles", title: "Smart Swaps", subtitle: "Dietary and budget-friendly")
             }
             .padding()
         }

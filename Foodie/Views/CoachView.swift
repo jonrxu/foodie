@@ -9,10 +9,10 @@ import SwiftUI
 
 struct CoachView: View {
     @StateObject private var vm = CoachViewModel()
-    @State private var showingApiKeySheet = false
     @State private var showingSessions = false
     @State private var showingClearConfirm = false
     @FocusState private var isInputFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
@@ -24,7 +24,6 @@ struct CoachView: View {
             }
         }
         .onAppear { vm.onAppear() }
-        .sheet(isPresented: $showingApiKeySheet) { ApiKeySheet() }
         .sheet(isPresented: $showingSessions) { SessionsSheet(vm: vm) }
         .alert("Error", isPresented: Binding(get: { vm.lastError != nil }, set: { _ in vm.lastError = nil })) {
             Button("OK", role: .cancel) { }
@@ -40,9 +39,6 @@ struct CoachView: View {
         .overlay(alignment: .top) { if vm.showConfetti { ConfettiView().allowsHitTesting(false) } }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                streakBadge
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showingSessions = true } label: {
                     Image(systemName: "text.justify")
                 }
@@ -52,30 +48,11 @@ struct CoachView: View {
                     Image(systemName: "trash.fill")
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingApiKeySheet = true } label: {
-                    Image(systemName: "gearshape.fill")
-                }
-            }
         }
         .background(AppTheme.background)
     }
 
     // Removed heavy header; actions moved to toolbar for a cleaner, minimalist look
-
-    private var streakBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "flame.fill").foregroundStyle(.orange)
-            Text("\(vm.streakCount)")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
-        .background(Color.white.opacity(0.15))
-        .clipShape(Capsule())
-        .accessibilityLabel("Streak \(vm.streakCount) days")
-    }
 
     private var quickChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -87,14 +64,24 @@ struct CoachView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Text(text)
+                                .foregroundStyle(.primary)
                                 .font(.system(size: 14, weight: .semibold))
                             Image(systemName: "sparkles")
+                                .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color(uiColor: .secondarySystemBackground))
+                                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.06), radius: 12, y: 6)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color(uiColor: .separator), lineWidth: 0.5)
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal)
@@ -123,9 +110,19 @@ struct CoachView: View {
     }
 
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            TextField("What’s your goal today?", text: $vm.inputText, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
+        HStack(alignment: .bottom, spacing: 12) {
+            TextField("Send a message", text: $vm.inputText, axis: .vertical)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color(uiColor: .secondarySystemBackground))
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.1), radius: 12, y: 6)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color(uiColor: .separator), lineWidth: 0.8)
+                )
                 .lineLimit(1...4)
                 .disabled(vm.isStreaming)
                 .focused($isInputFocused)
@@ -138,10 +135,14 @@ struct CoachView: View {
             if vm.isStreaming {
                 Button(action: { vm.cancelStreaming() }) {
                     Image(systemName: "stop.fill")
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
-                        .padding(10)
-                        .background(Color.red)
-                        .clipShape(Circle())
+                        .padding(14)
+                        .background(
+                            Circle()
+                                .fill(Color.red.gradient)
+                        )
+                        .shadow(color: Color.red.opacity(0.2), radius: 14, y: 8)
                         .accessibilityLabel("Stop response")
                 }
             } else {
@@ -150,17 +151,32 @@ struct CoachView: View {
                     vm.sendCurrentInput()
                 } label: {
                     Image(systemName: "paperplane.fill")
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
-                        .padding(10)
-                        .background(Color.blue)
-                        .clipShape(Circle())
+                        .padding(14)
+                        .background(
+                            Circle()
+                                .fill(LinearGradient(colors: [AppTheme.primary, AppTheme.primary.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        )
+                        .shadow(color: AppTheme.primary.opacity(0.35), radius: 16, y: 10)
                 }
                 .disabled(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.thinMaterial)
+        .padding(.vertical, 18)
+        .background(
+            VStack(spacing: 0) {
+                Color.clear.frame(height: 0)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            }
+        )
+        .overlay(alignment: .top) {
+            Divider()
+                .background(Color.white.opacity(0.4))
+                .blendMode(.overlay)
+        }
     }
 }
 

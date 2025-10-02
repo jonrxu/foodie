@@ -86,10 +86,22 @@ struct OpenAIClient {
 
 extension OpenAIClient {
     struct FoodAnalysisResult: Decodable {
+        let detected: Bool
         let summary: String
         let estimatedCalories: Int?
         let confidence: Double?
         let mealType: String?
+
+        private enum CodingKeys: String, CodingKey { case detected, summary, estimatedCalories, confidence, mealType }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            detected = try container.decodeIfPresent(Bool.self, forKey: .detected) ?? true
+            summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
+            estimatedCalories = try container.decodeIfPresent(Int.self, forKey: .estimatedCalories)
+            confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+            mealType = try container.decodeIfPresent(String.self, forKey: .mealType)
+        }
     }
 
     // Sends an image (as base64 data URL) and asks for a single concise sentence summary.
@@ -118,7 +130,7 @@ extension OpenAIClient {
             }
         }
 
-        let systemText = "You are a precise meal logger. Return ONE concise sentence that includes: item/brand, plain‑English portion/size, and an estimated calorie count.\nFormat example: 'Lay's Classic chips, regular bag (~28 g), estimated calories 160 kcal'.\nRules: no uncertainty words, no ranges, no emojis, no advice, <=140 chars.\nRespond strictly as JSON with keys: summary (string), estimatedCalories (integer kcal), confidence (0–1), mealType (string or null)."
+        let systemText = "You are a precise meal logger. Decide if the image clearly contains food or drink. Respond strictly as JSON with keys: detected (boolean), summary (string), estimatedCalories (integer kcal or null), confidence (0–1 or null), mealType (string like breakfast/lunch/dinner or null).\nIf no meal/drink is visible, set detected=false and return summary='' with other values null. When detected=true, return ONE concise sentence that includes item/brand, plain-English portion/size, and an estimated calorie count. Example: 'Lay's Classic chips, regular bag (~28 g), estimated calories 160 kcal'. No uncertainty words, no ranges, no emojis, no advice, <=140 characters."
 
         let messages: [RequestMessage] = [
             .init(role: "system", content: [.init(type: "text", text: systemText, image_url: nil)]),
