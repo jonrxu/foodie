@@ -167,23 +167,13 @@ struct MealPlanView: View {
             Text("Nearby places preview")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            ForEach(0..<3) { _ in
+            ForEach(0..<3) { index in
                 RoundedRectangle(cornerRadius: 12)
                     .fill(AppTheme.card)
                     .frame(height: 88)
                     .overlay(
-                        VStack(alignment: .leading, spacing: 6) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(width: 160, height: 16)
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.15))
-                                .frame(width: 200, height: 12)
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.1))
-                                .frame(width: 100, height: 10)
-                        }
-                        .padding(16)
+                        ShimmerView(id: index)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     )
             }
         }
@@ -194,7 +184,13 @@ struct MealPlanView: View {
             if vm.selectedTab == .places {
                 placesList
             } else {
-                foodsList
+                if vm.isLoadingFoods {
+                    foodsSkeletonList
+                } else if vm.foods.isEmpty {
+                    foodsEmptyState
+                } else {
+                    foodsList
+                }
             }
         }
     }
@@ -279,6 +275,37 @@ struct MealPlanView: View {
         }
     }
 
+    private var foodsSkeletonList: some View {
+        VStack(spacing: 12) {
+            ForEach(0..<4) { index in
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppTheme.card)
+                    .frame(height: 96)
+                    .overlay(
+                        ShimmerView(id: index)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    )
+            }
+        }
+    }
+
+    private var foodsEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "leaf")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+            Text("No recommendations yet")
+                .font(.headline)
+            Text("Tap refresh to try again or adjust your preferences.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
     private var permissionDeniedView: some View {
         VStack(spacing: 12) {
             Text("Location is turned off")
@@ -342,6 +369,40 @@ struct MealPlanView: View {
         .padding(.vertical, 6)
         .background(Color.red.opacity(0.08))
         .clipShape(Capsule())
+    }
+}
+
+private struct ShimmerView: View {
+    let id: Int
+    @State private var phase: CGFloat = -120
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color.gray.opacity(0.12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(colors: [Color.gray.opacity(0.15),
+                                                 Color.gray.opacity(0.25),
+                                                 Color.gray.opacity(0.15)],
+                                       startPoint: .leading,
+                                       endPoint: .trailing)
+                    )
+                    .mask(
+                        Rectangle()
+                            .fill(LinearGradient(colors: [.clear, .black, .clear],
+                                                 startPoint: .leading,
+                                                 endPoint: .trailing))
+                            .offset(x: phase)
+                    )
+                    .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: phase)
+            )
+            .onAppear {
+                // Stagger animations slightly using id
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15 * Double(id)) {
+                    phase = 120
+                }
+            }
     }
 }
 
