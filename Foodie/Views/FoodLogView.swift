@@ -12,17 +12,21 @@ struct FoodLogView: View {
 //    @State private var showingLibrary = false // Re-enable if photo library import returns
     @State private var showingManualEntry = false
     @State private var manualEntryText = ""
+    @State private var manualEntryCalories = ""
     @State private var activeAnalyses = 0
     @State private var alertTitle: String = ""
     @State private var alertMessage: String?
     @State private var logs: [FoodLogEntry] = FoodLogStore.shared.load().sorted(by: { $0.date > $1.date })
+    @EnvironmentObject private var preferences: UserPreferences
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20, pinnedViews: []) {
+            VStack(alignment: .leading, spacing: 20) {
                 header
 
                 captureRow
+
+                DailySummaryCard(entries: todaysEntries, calorieGoal: preferences.dailyCalorieGoal)
 
                 if logs.isEmpty {
                     emptyStateView
@@ -102,6 +106,7 @@ struct FoodLogView: View {
 
             Button {
                 manualEntryText = ""
+                manualEntryCalories = ""
                 showingManualEntry = true
             } label: {
                 Label("Quick Log", systemImage: "square.and.pencil")
@@ -164,18 +169,62 @@ struct FoodLogView: View {
         }
     }
 
-    private func handleManualEntry(_ text: String) async {
+    private func handleManualEntry(_ text: String, caloriesInput: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+
+        var providedCalories: Int?
+        if !caloriesInput.isEmpty {
+            if let parsed = Int(caloriesInput) {
+                providedCalories = parsed
+            } else {
+                await MainActor.run {
+                    alertTitle = "Invalid Calories"
+                    alertMessage = "Please enter calories using digits only."
+                }
+                return
+            }
+        }
+
         await MainActor.run { activeAnalyses += 1 }
+
+        var summaryForLog = trimmed
+        var caloriesForLog = providedCalories
+        var confidenceForLog: Double?
+        var mealTypeForLog: String?
+
+        if providedCalories == nil {
+            do {
+                let result = try await OpenAIClient().estimateCalories(for: trimmed)
+                if result.detected {
+                    let aiSummary = result.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !aiSummary.isEmpty {
+                        summaryForLog = aiSummary
+                    }
+                    caloriesForLog = result.estimatedCalories
+                    confidenceForLog = result.confidence
+                    mealTypeForLog = result.mealType
+                }
+            } catch {
+                await MainActor.run {
+                    alertTitle = "Estimation Failed"
+                    alertMessage = (error as? LocalizedError)?.errorDescription ?? "Couldn’t estimate calories for that entry. We’ll save it without calories."
+                }
+            }
+        }
+
         do {
-            try await persistEntry(summary: trimmed, estimatedCalories: nil, confidence: nil, mealType: nil)
+            try await persistEntry(summary: summaryForLog,
+                                   estimatedCalories: caloriesForLog,
+                                   confidence: confidenceForLog,
+                                   mealType: mealTypeForLog)
         } catch {
             await MainActor.run {
                 alertTitle = "Logging Failed"
                 alertMessage = (error as? LocalizedError)?.errorDescription ?? "Couldn’t analyze that entry. Please try again."
             }
         }
+
         await MainActor.run {
             activeAnalyses = max(activeAnalyses - 1, 0)
         }
@@ -215,6 +264,12 @@ struct FoodLogView: View {
             .sorted(by: { $0.date > $1.date })
     }
 
+    private var todaysEntries: [FoodLogEntry] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return logs.filter { calendar.isDate(calendar.startOfDay(for: $0.date), inSameDayAs: today) }
+    }
+
     private func dayLabel(for date: Date) -> String {
         let calendar = Calendar.current
         if let diff = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: Date())).day,
@@ -242,20 +297,28 @@ struct FoodLogView: View {
                 Section("Describe what you ate") {
                     TextEditor(text: $manualEntryText)
                         .frame(minHeight: 160)
+                    TextField("Calories (optional)", text: $manualEntryCalories)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
                 }
             }
             .navigationTitle("Quick Log")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showingManualEntry = false }
+                    Button("Cancel") {
+                        showingManualEntry = false
+                        manualEntryCalories = ""
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let text = manualEntryText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let caloriesInput = manualEntryCalories.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !text.isEmpty else { return }
                         showingManualEntry = false
                         manualEntryText = ""
-                        Task { await handleManualEntry(text) }
+                        manualEntryCalories = ""
+                        Task { await handleManualEntry(text, caloriesInput: caloriesInput) }
                     }
                     .disabled(manualEntryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -351,6 +414,80 @@ struct FoodLogView: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+        }
+    }
+
+    private struct DailySummaryCard: View {
+        let entries: [FoodLogEntry]
+        let calorieGoal: Int
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Today’s Snapshot")
+                        .font(.headline)
+                    Spacer()
+                    Text(summaryCalories)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                ProgressView(value: progress)
+                    .accentColor(.green)
+
+                HStack(alignment: .center, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Avg Score")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(avgScoreText)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Highlight")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(topHighlight)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal)
+        }
+
+        private var totalCalories: Int {
+            entries.compactMap { $0.estimatedCalories }.reduce(0, +)
+        }
+
+        private var progress: Double {
+            guard calorieGoal > 0 else { return 0 }
+            return min(Double(totalCalories) / Double(calorieGoal), 1)
+        }
+
+        private var summaryCalories: String {
+            guard calorieGoal > 0 else { return "" }
+            return "\(totalCalories) / \(calorieGoal) kcal"
+        }
+
+        private var avgScoreText: String {
+            guard !entries.isEmpty else { return "—" }
+            let scores = entries.compactMap { $0.healthIndex }
+            guard !scores.isEmpty else { return "—" }
+            let avg = Double(scores.reduce(0, +)) / Double(scores.count)
+            return "\(Int(avg.rounded()))"
+        }
+
+        private var topHighlight: String {
+            entries.compactMap { $0.healthHighlights?.first }.first ?? "Let’s make it a balanced day!"
         }
     }
 }

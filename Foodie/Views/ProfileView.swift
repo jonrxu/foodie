@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @State private var displayName: String = UserPreferencesStore.shared.loadDisplayName()
+    @EnvironmentObject var preferences: UserPreferences
+    @State private var displayName: String = ""
 
     var body: some View {
         Form {
@@ -20,13 +21,9 @@ struct ProfileView: View {
                     VStack(alignment: .leading) {
                         TextField("Your Name", text: $displayName)
                             .font(.headline)
-                            .textInputAutocapitalization(.words)
-                            .disableAutocorrection(true)
-                        Text("Premium • Streak 7").foregroundStyle(.secondary)
+                        Text("Beta • Joined \(joinedDateString)")
+                            .foregroundStyle(.secondary)
                     }
-                }
-                .onDisappear {
-                    UserPreferencesStore.shared.saveDisplayName(displayName)
                 }
             }
 
@@ -53,14 +50,23 @@ struct ProfileView: View {
         }
         .scrollContentBackground(.automatic)
         .background(AppTheme.background)
+        .onAppear {
+            displayName = UserPreferencesStore.shared.loadDisplayName()
+        }
         .onDisappear {
             UserPreferencesStore.shared.saveDisplayName(displayName)
         }
     }
+
+    private var joinedDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: preferences.joinedDate)
+    }
 }
 
 #Preview {
-    NavigationStack { ProfileView() }
+    NavigationStack { ProfileView().environmentObject(UserPreferences.shared) }
 }
 
 struct NotificationsView: View {
@@ -84,14 +90,89 @@ struct NotificationsView: View {
 }
 
 struct DietaryPreferencesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var preferences: UserPreferences
+    @State private var text: String = ""
+    @State private var savedText: String = ""
+    @State private var calorieGoalString: String = ""
+    @State private var savedCalorieGoal: Int = 0
+    @FocusState private var goalFieldFocused: Bool
+
+    private var trimmedText: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var isDirty: Bool {
+        trimmedText != savedText || (Int(calorieGoalString) ?? savedCalorieGoal) != savedCalorieGoal
+    }
+
     var body: some View {
-        PreferenceEditorScreen(
-            title: "Dietary Preferences",
-            hint: "Examples: vegetarian weekdays, low sodium, allergic to peanuts, hate mushrooms.",
-            initialValue: UserPreferencesStore.shared.loadDietaryPreferences(),
-            onSave: { value in UserPreferencesStore.shared.saveDietaryPreferences(value) },
-            onClear: { UserPreferencesStore.shared.clearDietaryPreferences() }
-        )
+        Form {
+            Section("Daily calorie target") {
+                HStack {
+                    Label("Calorie Goal", systemImage: "flame")
+                    Spacer()
+                    TextField("kcal", text: $calorieGoalString)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 90)
+                        .focused($goalFieldFocused)
+                }
+            }
+
+            Section("Tell Foodie about your preferences") {
+                TextEditor(text: $text)
+                    .frame(minHeight: 200)
+                    .textInputAutocapitalization(.sentences)
+                Text("Examples: vegetarian weekdays, low sodium, allergic to peanuts, hate mushrooms.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Dietary Preferences")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Close") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    let trimmed = trimmedText
+                    UserPreferencesStore.shared.saveDietaryPreferences(trimmed)
+                    savedText = trimmed
+
+                    if let value = Int(calorieGoalString), value > 0 {
+                        preferences.dailyCalorieGoal = value
+                        savedCalorieGoal = value
+                    }
+
+                    dismiss()
+                }
+                .disabled(!isDirty || (trimmedText.isEmpty && calorieGoalString.isEmpty))
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Button(role: .destructive) {
+                    text = ""
+                    savedText = ""
+                    UserPreferencesStore.shared.clearDietaryPreferences()
+                } label: {
+                    Label("Clear Preferences", systemImage: "trash")
+                }
+                .disabled(trimmedText.isEmpty)
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                if goalFieldFocused {
+                    Spacer()
+                    Button("Done") { goalFieldFocused = false }
+                }
+            }
+        }
+        .onAppear {
+            let stored = UserPreferencesStore.shared.loadDietaryPreferences()
+            text = stored
+            savedText = stored
+
+            let goal = preferences.dailyCalorieGoal
+            calorieGoalString = "\(goal)"
+            savedCalorieGoal = goal
+        }
     }
 }
 
