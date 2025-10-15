@@ -12,6 +12,7 @@ struct ProfileView: View {
     @EnvironmentObject private var preferences: UserPreferences
 
     @State private var showingEdit = false
+    @State private var showingResetConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -28,6 +29,14 @@ struct ProfileView: View {
         .sheet(isPresented: $showingEdit) {
             OnboardingFlowView()
                 .environmentObject(session)
+        }
+        .alert("Reset Profile?", isPresented: $showingResetConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                session.signOut()
+            }
+        } message: {
+            Text("This will clear all your profile data, preferences, and start fresh. This cannot be undone.")
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
@@ -117,9 +126,9 @@ struct ProfileView: View {
             }
 
             Button(role: .destructive) {
-                session.signOut()
+                showingResetConfirmation = true
             } label: {
-                Text("Sign out")
+                Text("Reset profile")
                     .font(.body)
                     .frame(maxWidth: .infinity)
                     .padding()

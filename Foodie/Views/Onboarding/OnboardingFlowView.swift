@@ -30,9 +30,35 @@ struct OnboardingFlowView: View {
         }
     }
 
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: AppSession
     @State private var step: Step = .welcome
     @State private var draftProfile: UserProfile
+
+    private let cuisineSuggestions = [
+        "Mediterranean",
+        "Italian comfort",
+        "Thai takeout",
+        "Latin flavors",
+        "Plant-based bowls",
+        "BBQ & grill",
+        "Japanese",
+        "Indian curries"
+    ]
+
+    private let budgetSuggestions = [
+        "Groceries under $60/week",
+        "Prefer bulk warehouse runs",
+        "Keep takeout under $30",
+        "Family meals on a budget"
+    ]
+
+    private let timeSuggestions = [
+        "15-minute dinners",
+        "Batch cook on Sundays",
+        "Slow cooker midweek",
+        "No oven on weekdays"
+    ]
 
     init(profile: UserProfile? = nil) {
         _draftProfile = State(initialValue: profile ?? UserProfile())
@@ -243,40 +269,70 @@ struct OnboardingFlowView: View {
     }
 
     private var preferencesStep: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            description("Anything about budget, time, or cuisines we should factor in?")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                description("Anything about budget, time, or cuisines we should factor in?")
 
-            Text("Favorite cuisines")
-                .font(.headline)
-            TagsEditor(tags: Binding(
-                get: { draftProfile.favoriteCuisines },
-                set: { draftProfile.favoriteCuisines = $0 }
-            ))
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Favorite cuisines")
+                        .font(.headline)
+                    
+                    WrappingHStack(items: cuisineSuggestions) { suggestion in
+                        SuggestionChip(title: suggestion) { addCuisine(suggestion) }
+                    }
+                    
+                    TagsEditor(tags: Binding(
+                        get: { draftProfile.favoriteCuisines },
+                        set: { draftProfile.favoriteCuisines = $0 }
+                    ))
+                }
 
-            Group {
-                Text("Budget notes")
-                    .font(.headline)
-                TextField("E.g. groceries under $80/week", text: Binding(
-                    get: { draftProfile.groceryBudgetNotes },
-                    set: { draftProfile.groceryBudgetNotes = $0 }
-                ), axis: .vertical)
-                .frame(minHeight: 60)
-                .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Budget notes")
+                        .font(.headline)
+                    
+                    WrappingHStack(items: budgetSuggestions) { suggestion in
+                        SuggestionChip(title: suggestion) { setBudgetSuggestion(suggestion) }
+                    }
+                    
+                    TextField("E.g. groceries under $80/week", text: Binding(
+                        get: { draftProfile.groceryBudgetNotes },
+                        set: { draftProfile.groceryBudgetNotes = $0 }
+                    ), axis: .vertical)
+                    .padding(12)
+                    .background(AppTheme.card)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
 
-                Text("Time & prep")
-                    .font(.headline)
-                TextField("E.g. 20 min dinners, batch cook Sundays", text: Binding(
-                    get: { draftProfile.cookingTimeNotes },
-                    set: { draftProfile.cookingTimeNotes = $0 }
-                ), axis: .vertical)
-                .frame(minHeight: 60)
-                .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Time & prep")
+                        .font(.headline)
+                    
+                    WrappingHStack(items: timeSuggestions) { suggestion in
+                        SuggestionChip(title: suggestion) { setTimeSuggestion(suggestion) }
+                    }
+                    
+                    TextField("E.g. 20 min dinners, batch cook Sundays", text: Binding(
+                        get: { draftProfile.cookingTimeNotes },
+                        set: { draftProfile.cookingTimeNotes = $0 }
+                    ), axis: .vertical)
+                    .padding(12)
+                    .background(AppTheme.card)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
             }
-
-            Spacer()
-            primaryButton(title: "Continue") { goForward() }
+            .padding(24)
+            .padding(.bottom, 140)
         }
-        .padding(24)
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 12) {
+                primaryButton(title: "Continue") { goForward() }
+                    .padding(.top, 8)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
+            .background(.ultraThinMaterial)
+        }
     }
 
     private var summaryStep: some View {
@@ -339,6 +395,7 @@ struct OnboardingFlowView: View {
             profile = draftProfile
         }
         session.completeOnboarding()
+        dismiss()
     }
 
     private func syncDraftFromSession() {
@@ -369,6 +426,20 @@ struct OnboardingFlowView: View {
         } else {
             draftProfile.healthGoals.append(goal)
         }
+    }
+
+    private func addCuisine(_ cuisine: String) {
+        if draftProfile.favoriteCuisines.contains(where: { $0.caseInsensitiveCompare(cuisine) == .orderedSame }) == false {
+            draftProfile.favoriteCuisines.append(cuisine)
+        }
+    }
+
+    private func setBudgetSuggestion(_ text: String) {
+        draftProfile.groceryBudgetNotes = text
+    }
+
+    private func setTimeSuggestion(_ text: String) {
+        draftProfile.cookingTimeNotes = text
     }
 
     private func description(_ text: String) -> some View {
@@ -422,19 +493,21 @@ private struct TagsEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FlowLayout(tags) { tag in
-                HStack(spacing: 6) {
-                    Text(tag)
-                    Button(action: { remove(tag) }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            if !tags.isEmpty {
+                WrappingHStack(items: tags) { tag in
+                    HStack(spacing: 6) {
+                        Text(tag)
+                        Button(action: { remove(tag) }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(AppTheme.primary.opacity(0.12))
+                    .clipShape(Capsule())
                 }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 10)
-                .background(AppTheme.primary.opacity(0.12))
-                .clipShape(Capsule())
             }
 
             HStack {
@@ -462,6 +535,23 @@ private struct TagsEditor: View {
     }
 }
 
+private struct SuggestionChip: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(AppTheme.primary.opacity(0.12))
+                .foregroundStyle(AppTheme.primary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 private struct SectionHeader: View {
     let title: String
@@ -492,6 +582,32 @@ private struct SummaryRow: View {
         .padding()
         .background(AppTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct WrappingHStack<Item: Hashable, Content: View>: View {
+    let items: [Item]
+    let content: (Item) -> Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(items.chunked(into: 2)), id: \.self) { row in
+                HStack(spacing: 8) {
+                    ForEach(row, id: \.self) { item in
+                        content(item)
+                    }
+                    Spacer()
+                }
+            }
+        }
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        stride(from: 0, to: count, by: size).map {
+            Array(self[$0 ..< Swift.min($0 + size, count)])
+        }
     }
 }
 

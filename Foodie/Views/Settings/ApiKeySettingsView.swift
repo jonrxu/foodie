@@ -24,9 +24,6 @@ struct ApiKeySettingsView: View {
         }
         .navigationTitle("API Key")
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
                     ApiKeyStore.shared.saveApiKey(key)
