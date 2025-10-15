@@ -134,10 +134,11 @@ final class MealPlanViewModel: ObservableObject {
     private func fetchFoods(for coordinate: CLLocationCoordinate2D) async {
         isLoadingFoods = true
         do {
+            let profile = AppSession.shared.profile
             let context = FoodRecommendationContext(
-                dietaryPreferences: UserPreferencesStore.shared.loadDietaryPreferences(),
-                favoriteCuisines: UserPreferencesStore.shared.loadFavoriteCuisines(),
-                budgetNotes: UserPreferencesStore.shared.loadBudgetPreferences(),
+                dietaryPreferences: profile?.dietarySummary ?? UserPreferencesStore.shared.loadDietaryPreferences(),
+                favoriteCuisines: profile?.favoriteCuisinesSummary ?? UserPreferencesStore.shared.loadFavoriteCuisines(),
+                budgetNotes: profile?.lifestyleSummary ?? UserPreferencesStore.shared.loadBudgetPreferences(),
                 recentMeals: loadRecentMealSummaries(),
                 nearbyPlaces: places
             )

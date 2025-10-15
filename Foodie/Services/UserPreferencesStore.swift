@@ -21,7 +21,11 @@ final class UserPreferencesStore {
 
     func saveDietaryPreferences(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(trimmed, forKey: dietaryKey)
+        if trimmed.isEmpty {
+            UserDefaults.standard.removeObject(forKey: dietaryKey)
+        } else {
+            UserDefaults.standard.set(trimmed, forKey: dietaryKey)
+        }
     }
 
     func clearDietaryPreferences() {
@@ -34,7 +38,11 @@ final class UserPreferencesStore {
 
     func saveFavoriteCuisines(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(trimmed, forKey: cuisinesKey)
+        if trimmed.isEmpty {
+            UserDefaults.standard.removeObject(forKey: cuisinesKey)
+        } else {
+            UserDefaults.standard.set(trimmed, forKey: cuisinesKey)
+        }
     }
 
     func clearFavoriteCuisines() {
@@ -47,7 +55,11 @@ final class UserPreferencesStore {
 
     func saveBudgetPreferences(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(trimmed, forKey: budgetKey)
+        if trimmed.isEmpty {
+            UserDefaults.standard.removeObject(forKey: budgetKey)
+        } else {
+            UserDefaults.standard.set(trimmed, forKey: budgetKey)
+        }
     }
 
     func clearBudgetPreferences() {
@@ -60,7 +72,11 @@ final class UserPreferencesStore {
 
     func saveDisplayName(_ name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        UserDefaults.standard.set(trimmed, forKey: displayNameKey)
+        if trimmed.isEmpty {
+            UserDefaults.standard.removeObject(forKey: displayNameKey)
+        } else {
+            UserDefaults.standard.set(trimmed, forKey: displayNameKey)
+        }
     }
 
     func clearDisplayName() {

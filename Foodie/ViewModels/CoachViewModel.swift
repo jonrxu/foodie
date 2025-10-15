@@ -82,7 +82,7 @@ final class CoachViewModel: ObservableObject {
         streamTask = Task { [weak self] in
             guard let self = self else { return }
             do {
-                let prompt = self.dynamicSystemPrompt()
+                let prompt = await self.dynamicSystemPrompt()
                 try await client.streamChat(systemPrompt: prompt, messages: history) { token in
                     DispatchQueue.main.async {
                         guard let idx = self.messages.lastIndex(where: { $0.role == .assistant }) else { return }
@@ -188,7 +188,7 @@ extension CoachViewModel {
         return false
     }
 
-    private func dynamicSystemPrompt() -> String {
+    @MainActor private func dynamicSystemPrompt() -> String {
         // Include recent meal history so the model can tailor recommendations without revealing the context in the chat transcript.
         var prompt = baseSystemPrompt
         let displayName = UserPreferencesStore.shared.loadDisplayName().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -196,19 +196,41 @@ extension CoachViewModel {
             prompt += "\n\nWhen addressing the user, prefer their first name (" + firstName + ") and use it the first time you mention them and sparingly thereafter for warmth."
         }
 
-        let preferences = UserPreferencesStore.shared.loadDietaryPreferences()
-        if preferences.isEmpty == false {
-            prompt += "\n\nUser dietary preferences (keep in mind when planning):\n" + preferences
-        }
+        if let profile = AppSession.shared.profile {
+            let diet = profile.dietarySummary
+            if diet.isEmpty == false {
+                prompt += "\n\nUser dietary preferences (keep in mind when planning):\n" + diet
+            }
 
-        let cuisines = UserPreferencesStore.shared.loadFavoriteCuisines()
-        if cuisines.isEmpty == false {
-            prompt += "\n\nUser favorite cuisines and flavor notes:\n" + cuisines
-        }
+            let allergens = profile.allergySummary
+            if allergens.isEmpty == false {
+                prompt += "\n\nAllergy notes:\n" + allergens
+            }
 
-        let budget = UserPreferencesStore.shared.loadBudgetPreferences()
-        if budget.isEmpty == false {
-            prompt += "\n\nUser budget & time constraints:\n" + budget
+            let cuisines = profile.favoriteCuisinesSummary
+            if cuisines.isEmpty == false {
+                prompt += "\n\nUser favorite cuisines and flavor notes:\n" + cuisines
+            }
+
+            let lifestyle = profile.lifestyleSummary
+            if lifestyle.isEmpty == false {
+                prompt += "\n\nUser budget & time constraints:\n" + lifestyle
+            }
+        } else {
+            let preferences = UserPreferencesStore.shared.loadDietaryPreferences()
+            if preferences.isEmpty == false {
+                prompt += "\n\nUser dietary preferences (keep in mind when planning):\n" + preferences
+            }
+
+            let cuisines = UserPreferencesStore.shared.loadFavoriteCuisines()
+            if cuisines.isEmpty == false {
+                prompt += "\n\nUser favorite cuisines and flavor notes:\n" + cuisines
+            }
+
+            let budget = UserPreferencesStore.shared.loadBudgetPreferences()
+            if budget.isEmpty == false {
+                prompt += "\n\nUser budget & time constraints:\n" + budget
+            }
         }
 
         let context = foodLogContext()
@@ -218,7 +240,7 @@ extension CoachViewModel {
         return prompt
     }
 
-    private func foodLogContext() -> String {
+    @MainActor private func foodLogContext() -> String {
         let logs = FoodLogStore.shared.load()
         guard logs.isEmpty == false else { return "" }
 

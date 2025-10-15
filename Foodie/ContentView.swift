@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var preferences = UserPreferences.shared
+
     var body: some View {
         TabView {
             NavigationStack {
@@ -50,6 +52,7 @@ struct ContentView: View {
                 Text("Profile")
             }
         }
+        .environmentObject(preferences)
     }
 }
 

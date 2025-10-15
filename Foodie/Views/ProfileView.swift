@@ -8,68 +8,186 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @EnvironmentObject var preferences: UserPreferences
-    @State private var displayName: String = ""
+    @EnvironmentObject private var session: AppSession
+    @EnvironmentObject private var preferences: UserPreferences
+
+    @State private var showingEdit = false
 
     var body: some View {
-        Form {
-            Section("Account") {
-                HStack {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(AppTheme.primary)
-                    VStack(alignment: .leading) {
-                        TextField("Your Name", text: $displayName)
-                            .font(.headline)
-                        Text("Beta • Joined \(joinedDateString)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                header
+                profileSummary
+                preferencesSection
+                settingsSection
             }
-
-            Section("Preferences") {
-                NavigationLink { DietaryPreferencesView() } label: {
-                    Label("Dietary Preferences", systemImage: "leaf.fill")
-                }
-                NavigationLink { FavoriteCuisinesView() } label: {
-                    Label("Favorite Cuisines", systemImage: "globe")
-                }
-                NavigationLink { BudgetTimePreferencesView() } label: {
-                    Label("Budget & Time", systemImage: "clock")
-                }
-            }
-
-            Section("Settings") {
-                NavigationLink { NotificationsView() } label: {
-                    Label("Notifications", systemImage: "bell.fill")
-                }
-                NavigationLink { ApiKeySettingsView() } label: {
-                    Label("OpenAI API Key", systemImage: "key.fill")
-                }
-            }
+            .padding(.vertical, 24)
         }
-        .scrollContentBackground(.automatic)
+        .safeAreaInset(edge: .bottom) { bottomActions }
         .background(AppTheme.background)
-        .onAppear {
-            displayName = UserPreferencesStore.shared.loadDisplayName()
+        .sheet(isPresented: $showingEdit) {
+            OnboardingFlowView()
+                .environmentObject(session)
         }
-        .onDisappear {
-            UserPreferencesStore.shared.saveDisplayName(displayName)
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var header: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(AppTheme.primary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(displayName.ifEmpty("Welcome"))
+                    .font(.title3).bold()
+                Text("Joined \(joinedDateString)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                if let email = session.profile?.email, !email.isEmpty {
+                    Text(email)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
         }
+        .padding(.horizontal, 24)
+    }
+
+    private var profileSummary: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Your focus")
+                .font(.headline)
+
+            SummaryRow(label: "Dietary style", value: session.profile?.dietarySummary.ifEmpty("Let’s choose one") ?? "Let’s choose one")
+            SummaryRow(label: "Allergies", value: session.profile?.allergySummary.ifEmpty("No allergies noted") ?? "No allergies noted")
+            SummaryRow(label: "Goals", value: session.profile?.goalsSummary.ifEmpty("Set your goals") ?? "Set your goals")
+            if let calorieGoal = session.profile?.dailyCalorieGoal ?? preferences.dailyCalorieGoal.nonZero {
+                SummaryRow(label: "Daily calories", value: "\(calorieGoal) kcal")
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var preferencesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Lifestyle notes")
+                .font(.headline)
+
+            SummaryRow(label: "Favorite cuisines", value: session.profile?.favoriteCuisinesSummary.ifEmpty("Add cuisines you love") ?? "Add cuisines you love")
+            SummaryRow(label: "Budget & time", value: session.profile?.lifestyleSummary.ifEmpty("Share budget or prep notes") ?? "Share budget or prep notes")
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Settings")
+                .font(.headline)
+
+            NavigationLink {
+                NotificationsView()
+            } label: {
+                SettingRow(icon: "bell.fill", title: "Notifications")
+            }
+
+            NavigationLink {
+                ApiKeySettingsView()
+            } label: {
+                SettingRow(icon: "key.fill", title: "OpenAI API Key")
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var bottomActions: some View {
+        VStack(spacing: 12) {
+            Button {
+                showingEdit = true
+            } label: {
+                Text("Edit profile")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(AppTheme.primary)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+
+            Button(role: .destructive) {
+                session.signOut()
+            } label: {
+                Text("Sign out")
+                    .font(.body)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(uiColor: .secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .padding(.bottom, 16)
+        }
+        .padding(.horizontal, 24)
+        .background(.ultraThinMaterial)
+    }
+
+    private var displayName: String {
+        session.profile?.displayName ?? UserPreferencesStore.shared.loadDisplayName()
     }
 
     private var joinedDateString: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        return formatter.string(from: preferences.joinedDate)
+        return formatter.string(from: session.profile?.joinedDate ?? preferences.joinedDate)
     }
 }
 
-#Preview {
-    NavigationStack { ProfileView().environmentObject(UserPreferences.shared) }
+private struct SummaryRow: View {
+    let label: String?
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let label {
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(value)
+                .font(.body)
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 }
 
-struct NotificationsView: View {
+private struct SettingRow: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(AppTheme.primary)
+            Text(title)
+                .font(.body)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct NotificationsView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "bell.slash.fill")
@@ -89,173 +207,20 @@ struct NotificationsView: View {
     }
 }
 
-struct DietaryPreferencesView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var preferences: UserPreferences
-    @State private var text: String = ""
-    @State private var savedText: String = ""
-    @State private var calorieGoalString: String = ""
-    @State private var savedCalorieGoal: Int = 0
-    @FocusState private var goalFieldFocused: Bool
-
-    private var trimmedText: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var isDirty: Bool {
-        trimmedText != savedText || (Int(calorieGoalString) ?? savedCalorieGoal) != savedCalorieGoal
-    }
-
-    var body: some View {
-        Form {
-            Section("Daily calorie target") {
-                HStack {
-                    Label("Calorie Goal", systemImage: "flame")
-                    Spacer()
-                    TextField("kcal", text: $calorieGoalString)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 90)
-                        .focused($goalFieldFocused)
-                }
-            }
-
-            Section("Tell Foodie about your preferences") {
-                TextEditor(text: $text)
-                    .frame(minHeight: 200)
-                    .textInputAutocapitalization(.sentences)
-                Text("Examples: vegetarian weekdays, low sodium, allergic to peanuts, hate mushrooms.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .navigationTitle("Dietary Preferences")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Close") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    let trimmed = trimmedText
-                    UserPreferencesStore.shared.saveDietaryPreferences(trimmed)
-                    savedText = trimmed
-
-                    if let value = Int(calorieGoalString), value > 0 {
-                        preferences.dailyCalorieGoal = value
-                        savedCalorieGoal = value
-                    }
-
-                    dismiss()
-                }
-                .disabled(!isDirty || (trimmedText.isEmpty && calorieGoalString.isEmpty))
-            }
-            ToolbarItem(placement: .bottomBar) {
-                Button(role: .destructive) {
-                    text = ""
-                    savedText = ""
-                    UserPreferencesStore.shared.clearDietaryPreferences()
-                } label: {
-                    Label("Clear Preferences", systemImage: "trash")
-                }
-                .disabled(trimmedText.isEmpty)
-            }
-            ToolbarItemGroup(placement: .keyboard) {
-                if goalFieldFocused {
-                    Spacer()
-                    Button("Done") { goalFieldFocused = false }
-                }
-            }
-        }
-        .onAppear {
-            let stored = UserPreferencesStore.shared.loadDietaryPreferences()
-            text = stored
-            savedText = stored
-
-            let goal = preferences.dailyCalorieGoal
-            calorieGoalString = "\(goal)"
-            savedCalorieGoal = goal
-        }
+#Preview {
+    NavigationStack {
+        ProfileView()
+            .environmentObject(AppSession.shared)
+            .environmentObject(UserPreferences.shared)
     }
 }
 
-struct FavoriteCuisinesView: View {
-    var body: some View {
-        PreferenceEditorScreen(
-            title: "Favorite Cuisines",
-            hint: "Examples: Thai takeout Fridays, love Mediterranean lunches, open to Latin flavors.",
-            initialValue: UserPreferencesStore.shared.loadFavoriteCuisines(),
-            onSave: { value in UserPreferencesStore.shared.saveFavoriteCuisines(value) },
-            onClear: { UserPreferencesStore.shared.clearFavoriteCuisines() }
-        )
-    }
+private extension Int {
+    var nonZero: Int? { self == 0 ? nil : self }
 }
 
-struct BudgetTimePreferencesView: View {
-    var body: some View {
-        PreferenceEditorScreen(
-            title: "Budget & Time",
-            hint: "Examples: grocery budget $60/week, 20-minute dinners, weekend meal prep ok.",
-            initialValue: UserPreferencesStore.shared.loadBudgetPreferences(),
-            onSave: { value in UserPreferencesStore.shared.saveBudgetPreferences(value) },
-            onClear: { UserPreferencesStore.shared.clearBudgetPreferences() }
-        )
+private extension String {
+    func ifEmpty(_ fallback: String) -> String {
+        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallback : self
     }
 }
-
-private struct PreferenceEditorScreen: View {
-    @Environment(\.dismiss) private var dismiss
-    let title: String
-    let hint: String
-    let initialValue: String
-    let onSave: (String) -> Void
-    let onClear: () -> Void
-
-    @State private var text: String = ""
-    @State private var savedText: String = ""
-
-    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var isDirty: Bool { trimmed != savedText }
-
-    var body: some View {
-        Form {
-            Section("Tell Foodie what to remember") {
-                TextEditor(text: $text)
-                    .frame(minHeight: 200)
-                    .textInputAutocapitalization(.sentences)
-                Text(hint)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Close") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    let value = trimmed
-                    onSave(value)
-                    savedText = value
-                    dismiss()
-                }
-                .disabled(trimmed.isEmpty || !isDirty)
-            }
-            ToolbarItem(placement: .bottomBar) {
-                Button(role: .destructive) {
-                    onClear()
-                    text = ""
-                    savedText = ""
-                } label: {
-                    Label("Clear", systemImage: "trash")
-                }
-                .disabled(trimmed.isEmpty)
-            }
-        }
-        .onAppear {
-            text = initialValue
-            savedText = initialValue
-        }
-    }
-}
-
-
