@@ -19,11 +19,15 @@ final class FoodLogStore {
 
     func load() -> [FoodLogEntry] {
         guard let data = try? Data(contentsOf: url) else { return [] }
-        return (try? JSONDecoder().decode([FoodLogEntry].self, from: data)) ?? []
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601WithFallback
+        return (try? decoder.decode([FoodLogEntry].self, from: data)) ?? []
     }
 
     func save(_ entries: [FoodLogEntry]) {
-        guard let data = try? JSONEncoder().encode(entries) else { return }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601WithFallback
+        guard let data = try? encoder.encode(entries) else { return }
         try? data.write(to: url, options: .atomic)
     }
 }

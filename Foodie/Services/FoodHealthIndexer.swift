@@ -18,6 +18,7 @@ final class FoodHealthIndexer {
         }
         do {
             let classified = try await OpenAIClient().classifyFood(summary: summary)
+            print("🔍 [FoodHealthIndexer] AI Classification for '\(summary)': score=\(classified.score), level=\(classified.level), tags=\(classified.tags)")
             let axes = FoodHealthAssessment.Axes(nutrientDensity: classified.axes.nutrientDensity,
                                                  processing: classified.axes.processing,
                                                  sugarLoad: classified.axes.sugarLoad,

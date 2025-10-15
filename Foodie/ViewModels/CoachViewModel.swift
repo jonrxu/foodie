@@ -242,7 +242,9 @@ extension CoachViewModel {
 
     @MainActor private func foodLogContext() -> String {
         let logs = FoodLogStore.shared.load()
-        guard logs.isEmpty == false else { return "" }
+        guard logs.isEmpty == false else { 
+            return "You haven't logged any food today yet. This is a fresh start - perfect time to plan your first healthy meal!"
+        }
 
         let calendar = Calendar.current
         let groups = Dictionary(grouping: logs) { calendar.startOfDay(for: $0.date) }

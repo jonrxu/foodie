@@ -19,6 +19,7 @@ struct FoodLogEntry: Identifiable, Codable, Equatable {
     var healthAxes: FoodHealthAssessment.Axes?
     var healthTags: [String]?
     var healthHighlights: [String]?
+    var nutrition: NutritionBreakdown?
 
     init(id: UUID = UUID(),
          date: Date = Date(),
@@ -30,7 +31,8 @@ struct FoodLogEntry: Identifiable, Codable, Equatable {
          healthLevel: String? = nil,
          healthAxes: FoodHealthAssessment.Axes? = nil,
          healthTags: [String]? = nil,
-         healthHighlights: [String]? = nil) {
+         healthHighlights: [String]? = nil,
+         nutrition: NutritionBreakdown? = nil) {
         self.id = id
         self.date = date
         self.summary = summary
@@ -42,6 +44,7 @@ struct FoodLogEntry: Identifiable, Codable, Equatable {
         self.healthAxes = healthAxes
         self.healthTags = healthTags
         self.healthHighlights = healthHighlights
+        self.nutrition = nutrition
     }
 }
 
