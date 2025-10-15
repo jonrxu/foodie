@@ -37,6 +37,7 @@ final class MealPlanViewModel: ObservableObject {
     private let foodsService: FoodRecommendationService
     private var cancellables: Set<AnyCancellable> = []
     private var lastFoodFetchCoordinate: CLLocationCoordinate2D?
+    private var latestCoordinate: CLLocationCoordinate2D?
 
     init(locationProvider: LocationProvider = .shared,
          placesService: PlacesService = LocalSearchPlacesService(),
@@ -83,6 +84,8 @@ final class MealPlanViewModel: ObservableObject {
         Task { await fetchData(for: location.coordinate) }
     }
 
+    var currentCoordinate: CLLocationCoordinate2D? { latestCoordinate ?? locationProvider.lastKnownLocation?.coordinate }
+
     private func tabDidChange(oldValue: Tab, newValue: Tab) {
         guard newValue == .foods,
               let location = locationProvider.lastKnownLocation else { return }
@@ -114,6 +117,7 @@ final class MealPlanViewModel: ObservableObject {
     }
 
     private func handleLocationUpdate(_ location: CLLocation) {
+        latestCoordinate = location.coordinate
         region = MKCoordinateRegion(center: location.coordinate,
                                     span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02))
         Task { await fetchData(for: location.coordinate) }
@@ -134,11 +138,10 @@ final class MealPlanViewModel: ObservableObject {
     private func fetchFoods(for coordinate: CLLocationCoordinate2D) async {
         isLoadingFoods = true
         do {
-            let profile = AppSession.shared.profile
             let context = FoodRecommendationContext(
-                dietaryPreferences: profile?.dietarySummary ?? UserPreferencesStore.shared.loadDietaryPreferences(),
-                favoriteCuisines: profile?.favoriteCuisinesSummary ?? UserPreferencesStore.shared.loadFavoriteCuisines(),
-                budgetNotes: profile?.lifestyleSummary ?? UserPreferencesStore.shared.loadBudgetPreferences(),
+                dietaryPreferences: UserPreferencesStore.shared.loadDietaryPreferences(),
+                favoriteCuisines: UserPreferencesStore.shared.loadFavoriteCuisines(),
+                budgetNotes: UserPreferencesStore.shared.loadBudgetPreferences(),
                 recentMeals: loadRecentMealSummaries(),
                 nearbyPlaces: places
             )

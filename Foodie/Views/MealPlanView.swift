@@ -184,12 +184,15 @@ struct MealPlanView: View {
             if vm.selectedTab == .places {
                 placesList
             } else {
-                if vm.isLoadingFoods {
-                    foodsSkeletonList
-                } else if vm.foods.isEmpty {
-                    foodsEmptyState
-                } else {
-                    foodsList
+                VStack(spacing: 16) {
+                    createInstacartButton
+                    if vm.isLoadingFoods {
+                        foodsSkeletonList
+                    } else if vm.foods.isEmpty {
+                        foodsEmptyState
+                    } else {
+                        foodsList
+                    }
                 }
             }
         }
@@ -250,12 +253,17 @@ struct MealPlanView: View {
                         Text(food.name)
                             .font(.headline)
                         Spacer()
-                        Text(priceLabel(for: food.price))
+                        Text(priceLabel(for: food.estimatedPrice))
                             .font(.headline)
                     }
                     Text("From \(food.storeName)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    if let quantity = food.quantityHint {
+                        Text("Qty: \(quantity)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Text(food.notes)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -347,10 +355,11 @@ struct MealPlanView: View {
         }
     }
 
-    private func priceLabel(for price: Double) -> String {
+    private func priceLabel(for price: Double?) -> String {
+        guard let price else { return "$–" }
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        return formatter.string(from: NSNumber(value: price)) ?? "$\(price)"
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "$%.2f", price)
     }
 
     private func doorDashIcon(size: CGFloat = 18) -> some View {
@@ -369,6 +378,67 @@ struct MealPlanView: View {
         .padding(.vertical, 6)
         .background(Color.red.opacity(0.08))
         .clipShape(Capsule())
+    }
+
+    private var configureInstacartAlert: Alert {
+        Alert(title: Text("Instacart API Key Needed"),
+              message: Text("Add your Instacart API key in Settings to create shopping lists."),
+              dismissButton: .default(Text("OK")))
+    }
+
+    @State private var showingConfigureAlert = false
+    @State private var isCreatingList = false
+    @State private var creationError: String?
+
+    private var createInstacartButton: some View {
+        Button {
+            Task { await createInstacartListTapped() }
+        } label: {
+            HStack {
+                if isCreatingList { ProgressView() }
+                Text("Create Instacart Cart")
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(vm.foods.isEmpty || isCreatingList)
+        .alert(isPresented: Binding(get: { showingConfigureAlert }, set: { showingConfigureAlert = $0 })) {
+            Alert(title: Text("Instacart API Key Needed"),
+                  message: Text("Add your Instacart API key in Settings to create shopping lists."),
+                  dismissButton: .default(Text("OK")))
+        }
+        .alert(item: Binding(get: {
+            creationError.map { IdentifiedError(message: $0) }
+        }, set: { newValue in
+            creationError = newValue?.message
+        })) { error in
+            Alert(title: Text("Unable to create list"), message: Text(error.message), dismissButton: .default(Text("OK")))
+        }
+    }
+
+    private struct IdentifiedError: Identifiable { let id = UUID(); let message: String }
+
+    private func createInstacartListTapped() async {
+        guard let coordinate = vm.currentCoordinate else {
+            creationError = "We need a current location before generating a cart."
+            return
+        }
+
+        guard (UserPreferencesStore.shared.loadInstacartApiKey() ?? "").isEmpty == false else {
+            showingConfigureAlert = true
+            return
+        }
+
+        isCreatingList = true
+        do {
+            let list = try await InstacartIntegrationService.shared.createShoppingList(from: vm.foods,
+                                                                                       title: "Weekly Shopping",
+                                                                                       coordinate: coordinate)
+            ShoppingListStore.shared.add(list)
+        } catch {
+            creationError = error.localizedDescription
+        }
+        isCreatingList = false
     }
 }
 

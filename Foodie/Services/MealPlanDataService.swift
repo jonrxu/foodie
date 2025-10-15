@@ -45,17 +45,25 @@ extension Place {
 struct FoodRecommendation: Identifiable, Hashable {
     let id: UUID
     let name: String
-    let price: Double
+    let estimatedPrice: Double?
     let storeName: String
     let notes: String
+    let quantityHint: String?
     let doorDashURL: URL?
 
-    init(id: UUID = UUID(), name: String, price: Double, storeName: String, notes: String, doorDashURL: URL?) {
+    init(id: UUID = UUID(),
+         name: String,
+         estimatedPrice: Double?,
+         storeName: String,
+         notes: String,
+         quantityHint: String? = nil,
+         doorDashURL: URL?) {
         self.id = id
         self.name = name
-        self.price = price
+        self.estimatedPrice = estimatedPrice
         self.storeName = storeName
         self.notes = notes
+        self.quantityHint = quantityHint
         self.doorDashURL = doorDashURL
     }
 }
@@ -95,9 +103,9 @@ final class MockFoodRecommendationService: FoodRecommendationService {
         try await Task.sleep(nanoseconds: 420_000_000)
         let baseURL = URL(string: "https://www.doordash.com/")
         return [
-            FoodRecommendation(name: "Seasonal Veggie Box", price: 18.99, storeName: "Green Harvest Market", notes: "Local produce for 4 meals", doorDashURL: baseURL),
-            FoodRecommendation(name: "Lean Protein Pack", price: 24.49, storeName: "Fresh Fare Co-op", notes: "Chicken, tofu, beans assortment", doorDashURL: baseURL),
-            FoodRecommendation(name: "Budget Pantry Essentials", price: 12.79, storeName: "Budget Bites Market", notes: "Whole grains, legumes, spices", doorDashURL: baseURL)
+            FoodRecommendation(name: "Seasonal Veggie Box", estimatedPrice: 18.99, storeName: "Green Harvest Market", notes: "Local produce for 4 meals", quantityHint: "1 box", doorDashURL: baseURL),
+            FoodRecommendation(name: "Lean Protein Pack", estimatedPrice: 24.49, storeName: "Fresh Fare Co-op", notes: "Chicken, tofu, beans assortment", quantityHint: "1 pack", doorDashURL: baseURL),
+            FoodRecommendation(name: "Budget Pantry Essentials", estimatedPrice: 12.79, storeName: "Budget Bites Market", notes: "Whole grains, legumes, spices", quantityHint: "1 bundle", doorDashURL: baseURL)
         ]
     }
 }
@@ -126,9 +134,10 @@ final class AIRecommendationService: FoodRecommendationService {
                                                                    coordinate: coordinate)
 
             return FoodRecommendation(name: item.name,
-                                      price: max(item.estimatedPrice ?? 0, 0),
+                                      estimatedPrice: max(item.estimatedPrice ?? 0, 0),
                                       storeName: matchedPlace?.name ?? (trimmedStore.isEmpty ? "Nearby Store" : trimmedStore),
                                       notes: item.note,
+                                      quantityHint: item.quantity,
                                       doorDashURL: link)
         }
     }
@@ -182,6 +191,7 @@ extension OpenAIClient {
             let estimatedPrice: Double?
             let store: String
             let note: String
+            let quantity: String?
         }
         let items: [Item]
     }
