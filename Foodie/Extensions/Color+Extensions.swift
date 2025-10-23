@@ -2,7 +2,6 @@
 //  Color+Extensions.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import SwiftUI

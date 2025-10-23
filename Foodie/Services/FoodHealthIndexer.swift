@@ -2,7 +2,6 @@
 //  FoodHealthIndexer.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import Foundation
