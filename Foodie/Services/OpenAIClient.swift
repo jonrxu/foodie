@@ -594,3 +594,67 @@ extension OpenAIClient {
     }
 }
 
+// MARK: - Voice Transcription
+extension OpenAIClient {
+    func transcribeAudio(audioData: Data, prompt: String? = nil) async throws -> String {
+        guard let apiKey = ApiKeyStore.shared.getApiKey() else {
+            throw OpenAIError.missingApiKey
+        }
+        
+        let url = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        
+        // Create multipart form data
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        
+        // Add model field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
+        body.append("whisper-1\r\n".data(using: .utf8)!)
+        
+        // Add prompt field if provided
+        if let prompt = prompt {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"prompt\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(prompt)\r\n".data(using: .utf8)!)
+        }
+        
+        // Add audio file
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            print("❌ [OpenAI] Transcription failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ [OpenAI] Error response: \(errorString)")
+            }
+            throw OpenAIError.badResponse
+        }
+        
+        struct TranscriptionResponse: Decodable {
+            let text: String
+        }
+        
+        let decoded = try JSONDecoder().decode(TranscriptionResponse.self, from: data)
+        print("✅ [OpenAI] Transcription: \(decoded.text)")
+        return decoded.text
+    }
+    
+    func parseFoodLog(transcript: String) async throws -> FoodAnalysisResult {
+        // Use the existing estimateCalories method but with enhanced prompt
+        return try await estimateCalories(for: transcript)
+    }
+}
+

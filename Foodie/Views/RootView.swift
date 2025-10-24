@@ -18,7 +18,7 @@ struct RootView: View {
                     if newValue == false { session.cancelOnboarding() }
                 }
             )) {
-                OnboardingFlowView(profile: session.profile ?? UserProfile())
+                SimpleOnboardingView()
                     .environmentObject(session)
             }
             .onAppear {

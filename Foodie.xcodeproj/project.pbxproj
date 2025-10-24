@@ -413,6 +413,7 @@
 				DEVELOPMENT_TEAM = AVMH2B76UK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Bites;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To snapshot meals for quick logging.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "To import a meal photo from your library.";
@@ -444,6 +445,7 @@
 				DEVELOPMENT_TEAM = AVMH2B76UK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Bites;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To snapshot meals for quick logging.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "To import a meal photo from your library.";
