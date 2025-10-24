@@ -2,7 +2,6 @@
 //  ProfileView.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import SwiftUI
@@ -27,7 +26,7 @@ struct ProfileView: View {
         .safeAreaInset(edge: .bottom) { bottomActions }
         .background(AppTheme.background)
         .sheet(isPresented: $showingEdit) {
-            OnboardingFlowView()
+            SimpleOnboardingView()
                 .environmentObject(session)
         }
         .alert("Reset Profile?", isPresented: $showingResetConfirmation) {

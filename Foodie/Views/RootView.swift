@@ -2,7 +2,6 @@
 //  RootView.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import SwiftUI
@@ -19,7 +18,7 @@ struct RootView: View {
                     if newValue == false { session.cancelOnboarding() }
                 }
             )) {
-                OnboardingFlowView(profile: session.profile ?? UserProfile())
+                SimpleOnboardingView()
                     .environmentObject(session)
             }
             .onAppear {

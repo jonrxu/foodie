@@ -2,7 +2,6 @@
 //  UserPreferencesStore.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import Foundation
@@ -14,6 +13,7 @@ final class UserPreferencesStore {
     private let cuisinesKey = "USER_FAVORITE_CUISINES"
     private let budgetKey = "USER_BUDGET_TIME_PREFS"
     private let displayNameKey = "USER_DISPLAY_NAME"
+    private let instacartKey = "INSTACART_API_KEY"
 
     func loadDietaryPreferences() -> String {
         UserDefaults.standard.string(forKey: dietaryKey) ?? ""
@@ -81,5 +81,22 @@ final class UserPreferencesStore {
 
     func clearDisplayName() {
         UserDefaults.standard.removeObject(forKey: displayNameKey)
+    }
+
+    func loadInstacartApiKey() -> String? {
+        UserDefaults.standard.string(forKey: instacartKey)
+    }
+
+    func saveInstacartApiKey(_ key: String?) {
+        let trimmed = key?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmed.isEmpty {
+            UserDefaults.standard.removeObject(forKey: instacartKey)
+        } else {
+            UserDefaults.standard.set(trimmed, forKey: instacartKey)
+        }
+    }
+
+    func clearInstacartApiKey() {
+        UserDefaults.standard.removeObject(forKey: instacartKey)
     }
 }

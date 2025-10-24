@@ -2,7 +2,6 @@
 //  OpenAIClient.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import Foundation
@@ -303,7 +302,7 @@ extension OpenAIClient {
             }
         }
 
-        let systemText = "You analyze meal photos and must respond with valid JSON that matches the provided NutritionAnalysis schema.\nGuidelines:\n- Describe edible food items only and estimate realistic portions (grams or household measures) when possible.\n- Provide nutrient totals per item and overall (calories, protein, carbohydrates, fat, fiber, added sugar, sodium, saturated fat, unsaturated fat).\n- If unsure, leave numeric fields null rather than guessing wildly; never output negative numbers.\n- Confidence values must be between 0 and 1.\n- Use canonical ingredient names and include helpful notes if something is uncertain or requires user confirmation.\n- If no edible food or drink is present, set detected=false, return an empty items array, and leave nutrient fields null."
+        let systemText = "You analyze meal photos and must respond with valid JSON that matches the provided NutritionAnalysis schema.\nGuidelines:\n- Describe edible food items only and estimate realistic portions (grams or household measures) when possible.\n- Provide nutrient totals per item and overall (calories, protein, carbohydrates, fat, fiber, added sugar, sodium, saturated fat, unsaturated fat).\n- If unsure, leave numeric fields null rather than guessing wildly; never output negative numbers.\n- Confidence values must be between 0 and 1.\n- Use canonical ingredient names and include helpful notes if something is uncertain or requires user confirmation.\n- For the summary field, provide a simple, concise description of the main food items (e.g., 'Caesar salad with grilled chicken' not 'This meal consists of a Caesar salad with grilled chicken breast').\n- If no edible food or drink is present, set detected=false, return an empty items array, and leave nutrient fields null."
 
         let messages: [RequestMessage] = [
             .init(role: "system", content: [.init(type: "text", text: systemText, image_url: nil)]),
@@ -592,6 +591,70 @@ extension OpenAIClient {
             throw OpenAIError.badResponse
         }
         return try JSONDecoder().decode(FoodClassification.self, from: jsonData)
+    }
+}
+
+// MARK: - Voice Transcription
+extension OpenAIClient {
+    func transcribeAudio(audioData: Data, prompt: String? = nil) async throws -> String {
+        guard let apiKey = ApiKeyStore.shared.getApiKey() else {
+            throw OpenAIError.missingApiKey
+        }
+        
+        let url = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        
+        // Create multipart form data
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        
+        // Add model field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
+        body.append("whisper-1\r\n".data(using: .utf8)!)
+        
+        // Add prompt field if provided
+        if let prompt = prompt {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"prompt\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(prompt)\r\n".data(using: .utf8)!)
+        }
+        
+        // Add audio file
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            print("❌ [OpenAI] Transcription failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ [OpenAI] Error response: \(errorString)")
+            }
+            throw OpenAIError.badResponse
+        }
+        
+        struct TranscriptionResponse: Decodable {
+            let text: String
+        }
+        
+        let decoded = try JSONDecoder().decode(TranscriptionResponse.self, from: data)
+        print("✅ [OpenAI] Transcription: \(decoded.text)")
+        return decoded.text
+    }
+    
+    func parseFoodLog(transcript: String) async throws -> FoodAnalysisResult {
+        // Use the existing estimateCalories method but with enhanced prompt
+        return try await estimateCalories(for: transcript)
     }
 }
 

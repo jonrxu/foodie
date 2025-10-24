@@ -2,7 +2,6 @@
 //  FoodLogView.swift
 //  Foodie
 //
-//  Created by AI Assistant.
 //
 
 import SwiftUI
