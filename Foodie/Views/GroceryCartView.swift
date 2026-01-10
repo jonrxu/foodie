@@ -33,6 +33,10 @@ struct GroceryCartView: View {
         } message: {
             Text("Your cart has been sent to Instacart. Check the app to complete your order!")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .appDidReset)) { _ in
+            // Clear cart when app is reset
+            cart = nil
+        }
     }
     
     private var emptyState: some View {

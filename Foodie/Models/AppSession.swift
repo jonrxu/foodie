@@ -6,6 +6,10 @@
 
 import Foundation
 
+extension Notification.Name {
+    static let appDidReset = Notification.Name("appDidReset")
+}
+
 @MainActor
 final class AppSession: ObservableObject {
     static let shared = AppSession()
@@ -77,6 +81,9 @@ final class AppSession: ObservableObject {
         let newProfile = UserProfile(joinedDate: Date())
         profile = newProfile
         isOnboardingPresented = true
+        
+        // Notify views to reset their state (e.g., grocery cart)
+        NotificationCenter.default.post(name: .appDidReset, object: nil)
     }
 
     func beginAuthentication() {
