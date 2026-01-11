@@ -55,6 +55,19 @@ struct MockupsView: View {
 
             Section {
                 NavigationLink {
+                    NighttimeGlucoseMockView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("CGM • Nighttime summary (Step 2)")
+                            .font(.headline)
+                        Text("Nights above range + avg nighttime glucose (last 7 days)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                NavigationLink {
                     WeeklyGlucoseOverviewMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
