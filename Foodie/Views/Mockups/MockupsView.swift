@@ -38,6 +38,23 @@ struct MockupsView: View {
                 }
 
                 NavigationLink {
+                    ShoppingCartMockView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Cart • Shopping cart list")
+                            .font(.headline)
+                        Text("Tagged items + Order button")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 6)
+                }
+            } header: {
+                Text("Mockup 1")
+            }
+
+            Section {
+                NavigationLink {
                     PlateFeedbackMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
