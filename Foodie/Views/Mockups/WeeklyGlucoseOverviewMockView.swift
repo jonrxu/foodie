@@ -9,6 +9,7 @@ import SwiftUI
 import Foundation
 
 struct WeeklyGlucoseOverviewMockView: View {
+    @Environment(\.dismiss) private var dismiss
     private let sample = CGMWeeklySample(
         timeInRangePercent: 78,
         avgGlucose: 118,
@@ -28,9 +29,29 @@ struct WeeklyGlucoseOverviewMockView: View {
             VStack(alignment: .leading, spacing: 16) {
                 headerCard
                 timeInRangeCard
-                insightsCard
+                weeklyPatternCard
             }
             .padding()
+        }
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Get Recommendations")
+                        .font(.headline)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.primary)
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color(uiColor: .systemBackground))
         }
         .background(AppTheme.background)
         .navigationTitle("Weekly Glucose")
@@ -80,14 +101,30 @@ struct WeeklyGlucoseOverviewMockView: View {
             Text("Weekly summary")
                 .font(.headline)
 
-            Text("You stayed in a healthy range most of the week.")
+            HStack {
+                Text("Time in range")
+                    .font(.subheadline).bold()
+                Spacer()
+                Text("\(sample.timeInRangePercent)%")
+                    .font(.subheadline).bold()
+                    .foregroundStyle(AppTheme.primary)
+            }
+
+            Text("Goal: 70–180 mg/dL")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            ProgressView(value: Double(sample.timeInRangePercent), total: 100)
+                .tint(AppTheme.primary)
+
+            Text("You stayed in range most days.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
-                MetricPill(systemImage: "checkmark.circle.fill", text: "Mostly steady", color: .green)
-                MetricPill(systemImage: "moon.stars.fill", text: "Nights calm", color: .blue)
-                MetricPill(systemImage: "fork.knife", text: "Meals balanced", color: .orange)
+                MetricPill(systemImage: "arrow.down.right", text: "2 lows", color: .red)
+                MetricPill(systemImage: "arrow.up.right", text: "5 highs", color: .orange)
+                MetricPill(systemImage: "chart.line.uptrend.xyaxis", text: "Variability", color: .blue)
             }
         }
         .padding(14)
@@ -95,16 +132,27 @@ struct WeeklyGlucoseOverviewMockView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var insightsCard: some View {
+    private var weeklyPatternCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Coach insights (mock)")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 10) {
-                AdviceLine(systemImage: "sparkles", color: AppTheme.primary, text: "Nice consistency this week. Keep the simple habits.")
-                AdviceLine(systemImage: "fork.knife", color: .orange, text: "If dinner runs higher, add a little more fiber or protein.")
-                AdviceLine(systemImage: "figure.walk", color: .green, text: "A 10–15 minute walk after meals could reduce post‑meal spikes.")
+            HStack {
+                Text("Weekly pattern")
+                    .font(.headline)
+                Spacer()
+                Text("Avg 118")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
+
+            BarChart(
+                values: sample.dailyTIR.map { Double($0) },
+                labels: sample.dayLabels,
+                barColor: AppTheme.primary
+            )
+            .frame(height: 140)
+
+            Text("Bars show % time in range by day.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(14)
         .background(AppTheme.card)
@@ -126,70 +174,9 @@ private struct CGMWeeklySample {
     let dailyAvg: [Int]
 }
 
-private struct StatCard: View {
-    let title: String
-    let value: String
-    let unit: String
-    let systemImage: String
-    let tint: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(tint)
-                Text(title)
-                    .font(.subheadline).bold()
-                    .foregroundStyle(.primary)
-                Spacer()
-            }
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(value)
-                    .font(.title2).bold()
-                Text(unit)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-private struct DaySelector: View {
-    let labels: [String]
-    @Binding var selectedIndex: Int
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Array(labels.enumerated()), id: \.offset) { idx, label in
-                    Button {
-                        selectedIndex = idx
-                    } label: {
-                        Text(label)
-                            .font(.subheadline).bold()
-                            .foregroundStyle(idx == selectedIndex ? .white : .secondary)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(idx == selectedIndex ? AppTheme.primary : Color(uiColor: .tertiarySystemFill))
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-}
-
 private struct BarChart: View {
     let values: [Double]
     let labels: [String]
-    let selectedIndex: Int
     let barColor: Color
 
     var body: some View {
@@ -200,7 +187,7 @@ private struct BarChart: View {
                 ForEach(Array(values.enumerated()), id: \.offset) { idx, v in
                     VStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(idx == selectedIndex ? barColor : barColor.opacity(0.35))
+                            .fill(barColor.opacity(0.45))
                             .frame(width: barWidth, height: max(8, geo.size.height * (v / maxV)))
 
                         Text(labels.indices.contains(idx) ? labels[idx] : "")
@@ -213,7 +200,7 @@ private struct BarChart: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
         .padding(12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .padding(.bottom, 14)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
