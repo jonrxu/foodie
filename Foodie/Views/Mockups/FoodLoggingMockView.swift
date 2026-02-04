@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct FoodLoggingMockView: View {
-    @State private var showingMockAlert = false
-    @State private var lastTapped: String = "Option"
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -25,11 +24,6 @@ struct FoodLoggingMockView: View {
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
-        .alert("Mock only", isPresented: $showingMockAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("\(lastTapped) is a demo-only button right now.")
-        }
     }
 
     private var header: some View {
@@ -118,8 +112,7 @@ struct FoodLoggingMockView: View {
     }
 
     private func tap(_ name: String) {
-        lastTapped = name
-        showingMockAlert = true
+        dismiss()
     }
 }
 

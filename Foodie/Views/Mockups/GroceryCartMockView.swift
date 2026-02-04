@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct GroceryCartMockView: View {
-    @State private var showingMockAlert = false
-    @State private var lastTapped: String = "Action"
+    @Environment(\.dismiss) private var dismiss
 
     private let cart = SampleCart(
         title: "Generated cart",
@@ -62,11 +61,6 @@ struct GroceryCartMockView: View {
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
-        .alert("Mock only", isPresented: $showingMockAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("\(lastTapped) is a demo-only button right now.")
-        }
     }
 
     private var headerCard: some View {
@@ -218,8 +212,7 @@ struct GroceryCartMockView: View {
     }
 
     private func tap(_ name: String) {
-        lastTapped = name
-        showingMockAlert = true
+        dismiss()
     }
 }
 

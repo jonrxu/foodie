@@ -8,9 +8,8 @@
 import SwiftUI
 
 struct FoodRecommendationsMockView: View {
-    @State private var showingMockAlert = false
-    @State private var lastTapped: String = "Action"
     @State private var added: Set<String> = []
+    @Environment(\.dismiss) private var dismiss
 
     private let recs: [CGMFoodRecommendationMock] = [
         CGMFoodRecommendationMock(
@@ -56,11 +55,6 @@ struct FoodRecommendationsMockView: View {
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
-        .alert("Mock only", isPresented: $showingMockAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("\(lastTapped) is a demo-only button right now.")
-        }
     }
 
     private var headerCard: some View {
@@ -124,20 +118,18 @@ struct FoodRecommendationsMockView: View {
                         onAdd: {
                             if added.contains(rec.id) {
                                 added.remove(rec.id)
-                                tap("Removed from cart")
                             } else {
                                 added.insert(rec.id)
-                                tap("Added to cart")
                             }
                         },
                         onDetails: {
-                            tap("Open details")
+                            dismiss()
                         }
                     )
                 }
 
                 Button {
-                    tap("View cart")
+                    dismiss()
                 } label: {
                     Label("View cart", systemImage: "cart.fill")
                         .font(.headline)
@@ -155,8 +147,7 @@ struct FoodRecommendationsMockView: View {
     }
 
     private func tap(_ name: String) {
-        lastTapped = name
-        showingMockAlert = true
+        dismiss()
     }
 }
 

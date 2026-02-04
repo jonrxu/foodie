@@ -12,6 +12,7 @@ struct PatientOnboardingStepOneView: View {
     @State private var lowSodium: Bool = false
     @State private var dislikes: String = ""
     @State private var activityLevel: ActivityLevel = .lightlyActive
+    @Environment(\.dismiss) private var dismiss
 
     private let dietOptions = ["Vegan", "Vegetarian", "Pescatarian", "No red meat", "No pork", "Kosher"]
 
@@ -132,7 +133,7 @@ struct PatientOnboardingStepOneView: View {
     private var footer: some View {
         VStack(spacing: 12) {
             Button {
-                // Continue action for flow integration
+                dismiss()
             } label: {
                 Text("Continue")
                     .font(.headline)
@@ -144,7 +145,7 @@ struct PatientOnboardingStepOneView: View {
             }
 
             Button("Back") {
-                // Back action for flow integration
+                dismiss()
             }
             .font(.subheadline).bold()
         }

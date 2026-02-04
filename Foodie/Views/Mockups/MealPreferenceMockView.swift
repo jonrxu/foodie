@@ -10,6 +10,7 @@ import SwiftUI
 struct MealPreferenceMockView: View {
     @State private var selectedFocus: Set<MealFocus> = [.balancedPlates]
     @State private var selectedMealTypes: Set<MealType> = [.lunch, .dinner]
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -30,7 +31,7 @@ struct MealPreferenceMockView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 12) {
                 Button {
-                    // Demo-only
+                    dismiss()
                 } label: {
                     Text("Continue")
                         .font(.headline)

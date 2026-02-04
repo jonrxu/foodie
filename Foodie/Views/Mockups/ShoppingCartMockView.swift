@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ShoppingCartMockView: View {
+    @Environment(\.dismiss) private var dismiss
     private let items: [CartItem] = [
         CartItem(name: "Bananas", detail: "4 each", tags: ["Fresh Produce"]),
         CartItem(name: "Apples", detail: "4 each", tags: ["Fresh Produce", "Fiber-rich"]),
@@ -30,7 +31,7 @@ struct ShoppingCartMockView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 12) {
                 Button {
-                    // Demo-only
+                    dismiss()
                 } label: {
                     Text("Order on Instacart")
                         .font(.headline)
