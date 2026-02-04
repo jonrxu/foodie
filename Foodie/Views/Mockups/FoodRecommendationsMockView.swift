@@ -10,7 +10,7 @@ import SwiftUI
 struct FoodRecommendationsMockView: View {
     @State private var showingMockAlert = false
     @State private var lastTapped: String = "Action"
-    @State private var added: Set<UUID> = []
+    @State private var added: Set<String> = []
 
     private let recs: [CGMFoodRecommendationMock] = [
         CGMFoodRecommendationMock(
@@ -19,9 +19,8 @@ struct FoodRecommendationsMockView: View {
             reason: "Tends to produce a gentler post‑meal rise vs. refined carbs.",
             impactLabel: "Low spike",
             impactColor: .green,
-            tags: ["Protein", "Fiber", "Quick"],
-            priceEstimate: "$7–$10",
-            cartItems: ["Greek yogurt (32 oz)", "Blueberries (12 oz)"]
+            tags: ["Protein", "Quick"],
+            cartItems: ["Greek yogurt", "Blueberries"]
         ),
         CGMFoodRecommendationMock(
             title: "Chicken + veggie stir‑fry",
@@ -29,9 +28,8 @@ struct FoodRecommendationsMockView: View {
             reason: "More volume + protein can reduce overnight highs.",
             impactLabel: "Steadier",
             impactColor: .blue,
-            tags: ["Dinner", "Low GI", "Meal prep"],
-            priceEstimate: "$18–$24",
-            cartItems: ["Chicken breast (2 lb)", "Broccoli", "Bell peppers", "Soy sauce (low sodium)"]
+            tags: ["Dinner", "Meal prep"],
+            cartItems: ["Chicken", "Broccoli", "Bell peppers"]
         ),
         CGMFoodRecommendationMock(
             title: "Oats + chia + cinnamon",
@@ -39,9 +37,8 @@ struct FoodRecommendationsMockView: View {
             reason: "Soluble fiber may reduce the size of spikes.",
             impactLabel: "Moderate",
             impactColor: .orange,
-            tags: ["Breakfast", "Fiber", "Budget"],
-            priceEstimate: "$8–$12",
-            cartItems: ["Old‑fashioned oats", "Chia seeds", "Cinnamon"]
+            tags: ["Breakfast", "Fiber"],
+            cartItems: ["Oats", "Chia", "Cinnamon"]
         )
     ]
 
@@ -163,14 +160,13 @@ struct FoodRecommendationsMockView: View {
 }
 
 private struct CGMFoodRecommendationMock: Identifiable {
-    let id = UUID()
+    var id: String { title }
     let title: String
     let subtitle: String
     let reason: String
     let impactLabel: String
     let impactColor: Color
     let tags: [String]
-    let priceEstimate: String
     let cartItems: [String]
 }
 
@@ -226,16 +222,6 @@ private struct RecommendationCard: View {
                         .background(Color(uiColor: .tertiarySystemFill))
                         .clipShape(Capsule())
                 }
-            }
-
-            HStack {
-                Text("Cart add")
-                    .font(.caption).bold()
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(rec.priceEstimate)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -302,5 +288,4 @@ private struct Pill: View {
         FoodRecommendationsMockView()
     }
 }
-
 

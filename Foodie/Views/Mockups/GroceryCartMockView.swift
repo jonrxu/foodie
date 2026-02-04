@@ -13,32 +13,32 @@ struct GroceryCartMockView: View {
 
     private let cart = SampleCart(
         title: "Generated cart",
-        subtitle: "High‑protein week • 18 items • 5 days",
+        subtitle: "High-protein week • 5 days",
         storeName: "Whole Foods (pickup)",
         etaText: "Ready in ~2 hours",
         items: [
-            SampleCartItem(name: "Chicken breast", detail: "2 lb", price: 13.98, category: "Protein", systemImage: "bolt.fill"),
-            SampleCartItem(name: "Greek yogurt", detail: "32 oz", price: 6.49, category: "Protein", systemImage: "bolt.fill"),
-            SampleCartItem(name: "Eggs", detail: "18 ct", price: 5.99, category: "Protein", systemImage: "bolt.fill"),
-            SampleCartItem(name: "Salmon fillets", detail: "1.5 lb", price: 19.99, category: "Protein", systemImage: "bolt.fill"),
+            SampleCartItem(name: "Chicken breast", detail: "2 lb", category: "Protein", systemImage: "bolt.fill"),
+            SampleCartItem(name: "Greek yogurt", detail: "32 oz", category: "Protein", systemImage: "bolt.fill"),
+            SampleCartItem(name: "Eggs", detail: "18 ct", category: "Protein", systemImage: "bolt.fill"),
+            SampleCartItem(name: "Salmon fillets", detail: "1.5 lb", category: "Protein", systemImage: "bolt.fill"),
 
-            SampleCartItem(name: "Brown rice", detail: "2 lb", price: 4.29, category: "Carbs", systemImage: "leaf.fill"),
-            SampleCartItem(name: "Sweet potatoes", detail: "3 lb", price: 5.49, category: "Carbs", systemImage: "leaf.fill"),
-            SampleCartItem(name: "Old‑fashioned oats", detail: "42 oz", price: 4.79, category: "Carbs", systemImage: "leaf.fill"),
+            SampleCartItem(name: "Brown rice", detail: "2 lb", category: "Carbs", systemImage: "leaf.fill"),
+            SampleCartItem(name: "Sweet potatoes", detail: "3 lb", category: "Carbs", systemImage: "leaf.fill"),
+            SampleCartItem(name: "Old‑fashioned oats", detail: "42 oz", category: "Carbs", systemImage: "leaf.fill"),
 
-            SampleCartItem(name: "Broccoli", detail: "2 heads", price: 4.38, category: "Produce", systemImage: "carrot.fill"),
-            SampleCartItem(name: "Mixed greens", detail: "10 oz", price: 5.99, category: "Produce", systemImage: "carrot.fill"),
-            SampleCartItem(name: "Bell peppers", detail: "3 ct", price: 4.99, category: "Produce", systemImage: "carrot.fill"),
-            SampleCartItem(name: "Bananas", detail: "6 ct", price: 2.19, category: "Produce", systemImage: "carrot.fill"),
-            SampleCartItem(name: "Blueberries", detail: "12 oz", price: 4.99, category: "Produce", systemImage: "carrot.fill"),
+            SampleCartItem(name: "Broccoli", detail: "2 heads", category: "Produce", systemImage: "carrot.fill"),
+            SampleCartItem(name: "Mixed greens", detail: "10 oz", category: "Produce", systemImage: "carrot.fill"),
+            SampleCartItem(name: "Bell peppers", detail: "3 ct", category: "Produce", systemImage: "carrot.fill"),
+            SampleCartItem(name: "Bananas", detail: "6 ct", category: "Produce", systemImage: "carrot.fill"),
+            SampleCartItem(name: "Blueberries", detail: "12 oz", category: "Produce", systemImage: "carrot.fill"),
 
-            SampleCartItem(name: "Olive oil", detail: "16.9 oz", price: 9.99, category: "Pantry", systemImage: "drop.fill"),
-            SampleCartItem(name: "Black beans", detail: "4 cans", price: 5.16, category: "Pantry", systemImage: "drop.fill"),
-            SampleCartItem(name: "Salsa", detail: "16 oz", price: 3.99, category: "Pantry", systemImage: "drop.fill"),
-            SampleCartItem(name: "Almonds", detail: "12 oz", price: 7.99, category: "Pantry", systemImage: "drop.fill"),
+            SampleCartItem(name: "Olive oil", detail: "16.9 oz", category: "Pantry", systemImage: "drop.fill"),
+            SampleCartItem(name: "Black beans", detail: "4 cans", category: "Pantry", systemImage: "drop.fill"),
+            SampleCartItem(name: "Salsa", detail: "16 oz", category: "Pantry", systemImage: "drop.fill"),
+            SampleCartItem(name: "Almonds", detail: "12 oz", category: "Pantry", systemImage: "drop.fill"),
 
-            SampleCartItem(name: "Sparkling water", detail: "12 pack", price: 6.99, category: "Extras", systemImage: "sparkles"),
-            SampleCartItem(name: "Dark chocolate", detail: "70% • 3 bars", price: 7.47, category: "Extras", systemImage: "sparkles")
+            SampleCartItem(name: "Sparkling water", detail: "12 pack", category: "Extras", systemImage: "sparkles"),
+            SampleCartItem(name: "Dark chocolate", detail: "70% • 3 bars", category: "Extras", systemImage: "sparkles")
         ],
         notes: [
             "Balanced macros: protein-forward, fiber-friendly.",
@@ -83,10 +83,10 @@ struct GroceryCartMockView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cart.title)
                         .font(.headline)
-                    Text(cart.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                Text(cart.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
                 }
 
                 Spacer()
@@ -124,51 +124,25 @@ struct GroceryCartMockView: View {
                 Text("Summary")
                     .font(.headline)
                 Spacer()
-                Text(cart.formattedTotal)
-                    .font(.headline)
+                Text("\(cart.items.count) items")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
                 MetricPill(systemImage: "bag.fill", text: "\(cart.items.count) items", color: .blue)
-                MetricPill(systemImage: "dollarsign.circle.fill", text: cart.formattedTotal, color: .green)
                 MetricPill(systemImage: "calendar", text: "5 days", color: .orange)
             }
 
-            HStack(spacing: 10) {
-                Button {
-                    tap("Checkout (Instacart)")
-                } label: {
-                    Label("Checkout", systemImage: "arrow.right.circle.fill")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppTheme.primary)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-
-                Button {
-                    tap("Share cart")
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.headline)
-                        .frame(width: 120)
-                        .padding(.vertical, 14)
-                        .background(Color(uiColor: .tertiarySystemFill))
-                        .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-            }
-
             Button {
-                tap("Swap items")
+                tap("Checkout (Instacart)")
             } label: {
-                Label("Swap items (diet + budget)", systemImage: "arrow.left.arrow.right")
+                Label("Checkout", systemImage: "arrow.right.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color(uiColor: .tertiarySystemFill))
-                    .foregroundStyle(.primary)
+                    .background(AppTheme.primary)
+                    .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
@@ -209,10 +183,6 @@ struct GroceryCartMockView: View {
                                 }
 
                                 Spacer()
-
-                                Text(item.formattedPrice)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
                             }
                             .padding(12)
                             .background(Color(uiColor: .tertiarySystemGroupedBackground))
@@ -277,13 +247,8 @@ private struct SampleCartItem: Identifiable {
     let id = UUID()
     let name: String
     let detail: String
-    let price: Double
     let category: String
     let systemImage: String
-
-    var formattedPrice: String {
-        String(format: "$%.2f", price)
-    }
 }
 
 private struct SampleCartCategoryGroup {
@@ -298,9 +263,6 @@ private struct SampleCart {
     let etaText: String
     let items: [SampleCartItem]
     let notes: [String]
-
-    var total: Double { items.reduce(0.0) { $0 + $1.price } }
-    var formattedTotal: String { String(format: "$%.2f", total) }
 
     var groupedCategories: [SampleCartCategoryGroup] {
         let grouped = Dictionary(grouping: items, by: { $0.category })
@@ -317,5 +279,3 @@ private struct SampleCart {
         GroceryCartMockView()
     }
 }
-
-

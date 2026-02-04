@@ -9,8 +9,6 @@ import SwiftUI
 import Foundation
 
 struct WeeklyGlucoseOverviewMockView: View {
-    @State private var selectedDayIndex: Int = 6
-
     private let sample = CGMWeeklySample(
         timeInRangePercent: 78,
         avgGlucose: 118,
@@ -30,8 +28,6 @@ struct WeeklyGlucoseOverviewMockView: View {
             VStack(alignment: .leading, spacing: 16) {
                 headerCard
                 timeInRangeCard
-                statsGrid
-                weeklyPatternCard
                 insightsCard
             }
             .padding()
@@ -57,14 +53,14 @@ struct WeeklyGlucoseOverviewMockView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("CGM overview")
                         .font(.headline)
-                    Text(sample.weekLabel)
+                    Text("Last week")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Text(sample.estimatedA1cText)
+                Text("Weekly snapshot")
                     .font(.caption).bold()
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 6)
@@ -80,70 +76,18 @@ struct WeeklyGlucoseOverviewMockView: View {
 
     private var timeInRangeCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Time in range")
-                    .font(.headline)
-                Spacer()
-                Text("\(sample.timeInRangePercent)%")
-                    .font(.title3).bold()
-                    .foregroundStyle(AppTheme.primary)
-            }
+            Text("Weekly summary")
+                .font(.headline)
 
-            Text("Goal: 70–180 mg/dL")
+            Text("You stayed in a healthy range most of the week.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            ProgressView(value: Double(sample.timeInRangePercent), total: 100)
-                .tint(AppTheme.primary)
-
             HStack(spacing: 10) {
-                MetricPill(systemImage: "arrow.down.right", text: "\(sample.lowsCount) lows", color: .red)
-                MetricPill(systemImage: "arrow.up.right", text: "\(sample.highsCount) highs", color: .orange)
-                MetricPill(systemImage: "chart.line.uptrend.xyaxis", text: "Var \(sample.variabilityPercent)%", color: .blue)
+                MetricPill(systemImage: "checkmark.circle.fill", text: "Mostly steady", color: .green)
+                MetricPill(systemImage: "moon.stars.fill", text: "Nights calm", color: .blue)
+                MetricPill(systemImage: "fork.knife", text: "Meals balanced", color: .orange)
             }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var statsGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-        return LazyVGrid(columns: columns, spacing: 12) {
-            StatCard(title: "Avg glucose", value: "\(sample.avgGlucose)", unit: "mg/dL", systemImage: "gauge", tint: .blue)
-            StatCard(title: "GMI", value: String(format: "%.1f", sample.gmi), unit: "%", systemImage: "percent", tint: .green)
-            StatCard(title: "Variability", value: "\(sample.variabilityPercent)", unit: "%", systemImage: "waveform.path", tint: .orange)
-            StatCard(title: "Readings", value: "98%", unit: "coverage", systemImage: "checkmark.seal.fill", tint: AppTheme.primary)
-        }
-    }
-
-    private var weeklyPatternCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Weekly pattern")
-                    .font(.headline)
-                Spacer()
-                Text("\(sample.dayLabels[selectedDayIndex]) • Avg \(sample.dailyAvg[selectedDayIndex])")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            DaySelector(
-                labels: sample.dayLabels,
-                selectedIndex: $selectedDayIndex
-            )
-
-            BarChart(
-                values: sample.dailyTIR.map { Double($0) },
-                labels: sample.dayLabels,
-                selectedIndex: selectedDayIndex,
-                barColor: AppTheme.primary
-            )
-            .frame(height: 140)
-
-            Text("Bars show % time in range by day.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .padding(14)
         .background(AppTheme.card)
@@ -156,8 +100,8 @@ struct WeeklyGlucoseOverviewMockView: View {
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 10) {
-                AdviceLine(systemImage: "sparkles", color: AppTheme.primary, text: "Nice consistency: your time‑in‑range stayed above 70% most days.")
-                AdviceLine(systemImage: "fork.knife", color: .orange, text: "You tend to run higher after dinner — try adding fiber + protein to slow absorption.")
+                AdviceLine(systemImage: "sparkles", color: AppTheme.primary, text: "Nice consistency this week. Keep the simple habits.")
+                AdviceLine(systemImage: "fork.knife", color: .orange, text: "If dinner runs higher, add a little more fiber or protein.")
                 AdviceLine(systemImage: "figure.walk", color: .green, text: "A 10–15 minute walk after meals could reduce post‑meal spikes.")
             }
         }
@@ -299,5 +243,3 @@ private struct MetricPill: View {
         WeeklyGlucoseOverviewMockView()
     }
 }
-
-

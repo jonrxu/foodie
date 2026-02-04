@@ -16,7 +16,6 @@ struct FoodLoggingMockView: View {
             VStack(alignment: .leading, spacing: 16) {
                 heroHeader
                 entryOptions
-                quickTextMock
                 recentMock
             }
             .padding()
@@ -53,7 +52,6 @@ struct FoodLoggingMockView: View {
 
             let columns = [
                 GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12),
                 GridItem(.flexible(), spacing: 12)
             ]
 
@@ -86,75 +84,15 @@ struct FoodLoggingMockView: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                Button {
-                    tap("Start voice")
-                } label: {
-                    Label("Start voice log", systemImage: "waveform")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppTheme.primary)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-
-                Button {
-                    tap("Add a meal")
-                } label: {
-                    Label("Add", systemImage: "plus")
-                        .font(.headline)
-                        .frame(width: 110)
-                        .padding(.vertical, 14)
-                        .background(Color(uiColor: .tertiarySystemFill))
-                        .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var quickTextMock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Quick text log")
-                    .font(.headline)
-                Spacer()
-                Text("Mock")
-                    .font(.caption).bold()
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(Color(uiColor: .tertiarySystemFill))
-                    .clipShape(Capsule())
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Example input")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("“Turkey sandwich with lettuce + tomato, a handful of chips, and an iced coffee.”")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
             Button {
-                tap("Submit text")
+                tap("Start voice")
             } label: {
-                Label("Submit text", systemImage: "paperplane.fill")
+                Label("Start voice log", systemImage: "waveform")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color(uiColor: .tertiarySystemFill))
-                    .foregroundStyle(.primary)
+                    .background(AppTheme.primary)
+                    .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
@@ -165,13 +103,12 @@ struct FoodLoggingMockView: View {
 
     private var recentMock: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent logs (mock)")
+            Text("Recent logs")
                 .font(.headline)
 
             VStack(spacing: 10) {
-                MockLogRow(title: "Greek yogurt + berries", subtitle: "Breakfast • 8:12 AM", badge: "A")
-                MockLogRow(title: "Chicken burrito bowl", subtitle: "Lunch • 12:41 PM", badge: "B")
-                MockLogRow(title: "Pasta + marinara", subtitle: "Dinner • 7:05 PM", badge: "C")
+                MockLogRow(title: "Greek yogurt + berries", subtitle: "Breakfast", badge: "Done")
+                MockLogRow(title: "Chicken burrito bowl", subtitle: "Lunch", badge: "Done")
             }
         }
         .padding(14)
@@ -264,5 +201,4 @@ private struct MockLogRow: View {
         FoodLoggingMockView()
     }
 }
-
 

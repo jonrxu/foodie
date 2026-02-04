@@ -9,14 +9,6 @@ import SwiftUI
 import Foundation
 
 struct NighttimeGlucoseMockView: View {
-    private enum MetricMode: String, CaseIterable, Identifiable {
-        case nightsAboveRange = "Nights Above Range"
-        case avgNightGlucose = "Avg Night Glucose"
-        var id: String { rawValue }
-    }
-
-    @State private var mode: MetricMode = .nightsAboveRange
-
     private let sample = NighttimeCGMSample(
         windowLabel: "Night window: 12:00 AM – 6:00 AM",
         rangeLabel: "Target: 70–180 mg/dL",
@@ -34,9 +26,7 @@ struct NighttimeGlucoseMockView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 headerCard
-                primaryMetricCard
-                breakdownCard
-                trendCard
+                primarySummaryCard
                 coachCard
             }
             .padding()
@@ -73,52 +63,10 @@ struct NighttimeGlucoseMockView: View {
             Divider().opacity(0.25)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(sample.windowLabel)
+                Text("Night window")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text(sample.rangeLabel)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var primaryMetricCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Picker("Metric", selection: $mode) {
-                ForEach(MetricMode.allCases) { m in
-                    Text(m.rawValue).tag(m)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            if mode == .nightsAboveRange {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(sample.nightsAboveRange)")
-                        .font(.system(size: 42, weight: .bold))
-                    Text("/ \(sample.totalNights) nights")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-
-                Text("You were above range at night on \(sample.nightsAboveRange) of the last \(sample.totalNights) nights.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(sample.avgNightGlucose)")
-                        .font(.system(size: 42, weight: .bold))
-                    Text("mg/dL")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-
-                Text("Your average glucose during the night window was \(sample.avgNightGlucose) mg/dL.")
+                Text("Target range")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -128,52 +76,14 @@ struct NighttimeGlucoseMockView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var breakdownCard: some View {
+    private var primarySummaryCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Night breakdown (avg)")
-                .font(.headline)
+            Text("Your nights look mostly steady this week.")
+                .font(.title3).bold()
 
-            HStack(spacing: 10) {
-                MetricChip(title: "Above range", value: "\(sample.avgMinutesAboveRange) min", tint: .orange, systemImage: "arrow.up.right")
-                MetricChip(title: "Below range", value: "\(sample.avgMinutesBelowRange) min", tint: .red, systemImage: "arrow.down.right")
-                MetricChip(title: "In range", value: "\(max(0, 360 - sample.avgMinutesAboveRange - sample.avgMinutesBelowRange)) min", tint: .green, systemImage: "checkmark.circle.fill")
-            }
-
-            Text("Assumes a 6-hour night window (~360 minutes).")
-                .font(.caption)
+            Text("We will keep watching for patterns and help you adjust dinner choices and timing.")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var trendCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Last 7 nights")
-                    .font(.headline)
-                Spacer()
-                Text(mode == .nightsAboveRange ? "Minutes above range" : "Avg glucose")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            NightBarChart(
-                labels: sample.dayLabels,
-                values: mode == .nightsAboveRange
-                ? sample.nightlyMinutesAboveRange.map(Double.init)
-                : sample.nightlyAvg.map(Double.init),
-                threshold: mode == .nightsAboveRange ? 45 : 140,
-                barColor: AppTheme.primary
-            )
-            .frame(height: 150)
-
-            Text(mode == .nightsAboveRange
-                 ? "Highlighted bars suggest higher-than-usual time above range."
-                 : "Highlighted bars suggest higher-than-usual overnight averages.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
         .padding(14)
         .background(AppTheme.card)
@@ -275,5 +185,3 @@ private struct NightBarChart: View {
         NighttimeGlucoseMockView()
     }
 }
-
-

@@ -12,6 +12,32 @@ struct MockupsView: View {
         List {
             Section {
                 NavigationLink {
+                    PatientOnboardingStepOneView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Onboarding • About you (Step 1)")
+                            .font(.headline)
+                        Text("Diet, low sodium, dislikes, activity level")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                NavigationLink {
+                    MealPreferenceMockView()
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Onboarding • Meal preferences")
+                            .font(.headline)
+                        Text("Select meal focus + meal types")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                NavigationLink {
                     PlateFeedbackMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
@@ -107,5 +133,3 @@ struct MockupsView: View {
         MockupsView()
     }
 }
-
-

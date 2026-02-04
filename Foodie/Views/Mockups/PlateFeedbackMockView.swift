@@ -136,11 +136,8 @@ struct PlateFeedbackMockView: View {
             VStack(alignment: .leading, spacing: 16) {
                 flowCard
                 headerCard
-                scoreCard
-                macrosCard
-                nutrientsCard
-                adviceCard
-                itemsCard
+                balancedPlateCard
+                guidanceCard
                 nextMealCard
                 actionsCard
 
@@ -252,141 +249,30 @@ struct PlateFeedbackMockView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var macrosCard: some View {
-        let breakdown = MacroBreakdown(carbsG: sample.carbsG, proteinG: sample.proteinG, fatG: sample.fatG)
-
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Macros")
-                    .font(.headline)
-                Spacer()
-                Text("\(sample.estimatedCalories) cal (est.)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            DonutMacroChart(segments: breakdown.segments)
-
-            VStack(spacing: 10) {
-                MacroRow(
-                    title: "Carbs",
-                    grams: sample.carbsG,
-                    percent: breakdown.carbsPercent,
-                    color: .blue,
-                    systemImage: "leaf"
-                )
-                MacroRow(
-                    title: "Protein",
-                    grams: sample.proteinG,
-                    percent: breakdown.proteinPercent,
-                    color: .green,
-                    systemImage: "bolt"
-                )
-                MacroRow(
-                    title: "Fat",
-                    grams: sample.fatG,
-                    percent: breakdown.fatPercent,
-                    color: .orange,
-                    systemImage: "drop.fill"
-                )
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var nutrientsCard: some View {
+    private var balancedPlateCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Key nutrition details")
+            Text("Balanced plate")
                 .font(.headline)
-
-            VStack(spacing: 10) {
-                MetricRow(title: "Fiber", value: "\(sample.fiberG)g", hint: "Aim ~25–35g/day", systemImage: "leaf.fill", color: .green)
-                MetricRow(title: "Added sugar", value: "\(sample.addedSugarG)g", hint: "Keep it low when possible", systemImage: "cube.fill", color: .pink)
-                MetricRow(title: "Sodium", value: "\(sample.sodiumMg)mg", hint: "Many people aim < 2,300mg/day", systemImage: "drop.triangle.fill", color: .orange)
-                MetricRow(title: "Sat. fat", value: "\(sample.saturatedFatG)g", hint: "Balance with unsat. fats", systemImage: "flame.fill", color: .red)
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var adviceCard: some View {
-        let breakdown = MacroBreakdown(carbsG: sample.carbsG, proteinG: sample.proteinG, fatG: sample.fatG)
-
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Coach feedback")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 10) {
-                if !sample.whatWentWell.isEmpty {
-                    Text("What went well")
-                        .font(.subheadline).bold()
-                    ForEach(sample.whatWentWell, id: \.self) { text in
-                        AdviceLine(systemImage: "checkmark.circle.fill", color: .green, text: text)
-                    }
-                }
-
-                if !sample.improvements.isEmpty {
-                    Divider().opacity(0.3)
-                    Text("Opportunities")
-                        .font(.subheadline).bold()
-                    ForEach(sample.improvements, id: \.self) { text in
-                        AdviceLine(systemImage: "wand.and.stars", color: AppTheme.primary, text: text)
-                    }
-                }
-
-                if !sample.smartSwaps.isEmpty {
-                    Divider().opacity(0.3)
-                    Text("Smart swaps")
-                        .font(.subheadline).bold()
-                    ForEach(sample.smartSwaps, id: \.self) { text in
-                        AdviceLine(systemImage: "arrow.left.arrow.right.circle.fill", color: .blue, text: text)
-                    }
-                }
-            }
-
-            Divider().opacity(0.3)
-
-            Text("Summary")
-                .font(.subheadline).bold()
-                .foregroundStyle(.secondary)
-
-            Text("It looks like \(breakdown.carbsPercent)% is carbohydrates, \(breakdown.proteinPercent)% is protein, and \(breakdown.fatPercent)% is fat.")
+            Text("Aim for half veggies, a quarter protein, and a quarter carb foods.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            BalancedPlateDiagram()
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
         }
         .padding(14)
         .background(AppTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var itemsCard: some View {
+    private var guidanceCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("What we detected")
+            Text("Coach tips")
                 .font(.headline)
-
-            VStack(spacing: 10) {
-                ForEach(sample.items) { item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(item.name)
-                                .font(.subheadline).bold()
-                            Spacer()
-                            Text("\(item.carbsG)C  \(item.proteinG)P  \(item.fatG)F")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(item.note)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(12)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
+            VStack(alignment: .leading, spacing: 10) {
+                AdviceLine(systemImage: "leaf.fill", color: .green, text: "Add extra veggies when you can.")
+                AdviceLine(systemImage: "bolt.fill", color: .blue, text: "Include a protein anchor to feel full longer.")
+                AdviceLine(systemImage: "drop.fill", color: .orange, text: "Choose a small carb portion you enjoy.")
             }
         }
         .padding(14)
@@ -410,31 +296,17 @@ struct PlateFeedbackMockView: View {
             Text("Actions")
                 .font(.headline)
 
-            VStack(spacing: 10) {
-                Button {
-                    copyFeedbackToClipboard()
-                    showingCopiedAlert = true
-                } label: {
-                    Label("Copy feedback", systemImage: "doc.on.doc")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(uiColor: .tertiarySystemFill))
-                        .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-
-                Button {
-                    // Demo-only placeholder
-                } label: {
-                    Label("Save as a template", systemImage: "bookmark.fill")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(uiColor: .tertiarySystemFill))
-                        .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
+            Button {
+                copyFeedbackToClipboard()
+                showingCopiedAlert = true
+            } label: {
+                Label("Save this tip", systemImage: "bookmark.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color(uiColor: .tertiarySystemFill))
+                    .foregroundStyle(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
         .padding(14)
@@ -443,22 +315,15 @@ struct PlateFeedbackMockView: View {
     }
 
     private func copyFeedbackToClipboard() {
-        let breakdown = MacroBreakdown(carbsG: sample.carbsG, proteinG: sample.proteinG, fatG: sample.fatG)
-
         var lines: [String] = []
         lines.append("Plate feedback — \(sample.mealName)")
-        lines.append("Macros: \(breakdown.carbsPercent)% C / \(breakdown.proteinPercent)% P / \(breakdown.fatPercent)% F")
-        lines.append("Calories (est.): \(sample.estimatedCalories)")
-        lines.append("Fiber: \(sample.fiberG)g, Added sugar: \(sample.addedSugarG)g, Sodium: \(sample.sodiumMg)mg")
+        lines.append("Balanced plate tip:")
+        lines.append("Half veggies, quarter protein, quarter carbs.")
         lines.append("")
-        lines.append("What went well:")
-        lines.append(contentsOf: sample.whatWentWell.map { "- \($0)" })
-        lines.append("")
-        lines.append("Opportunities:")
-        lines.append(contentsOf: sample.improvements.map { "- \($0)" })
-        lines.append("")
-        lines.append("Smart swaps:")
-        lines.append(contentsOf: sample.smartSwaps.map { "- \($0)" })
+        lines.append("Coach tips:")
+        lines.append("- Add extra veggies when you can.")
+        lines.append("- Include a protein anchor to feel full longer.")
+        lines.append("- Choose a small carb portion you enjoy.")
 
         #if canImport(UIKit)
         UIPasteboard.general.string = lines.joined(separator: "\n")
@@ -685,5 +550,4 @@ private struct FlowStepRow: View {
         PlateFeedbackMockView()
     }
 }
-
 
