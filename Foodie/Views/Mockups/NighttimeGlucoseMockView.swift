@@ -35,6 +35,7 @@ struct NighttimeGlucoseMockView: View {
         .navigationTitle("Nighttime")
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
     }
 
     private var headerCard: some View {

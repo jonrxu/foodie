@@ -61,6 +61,7 @@ struct GroceryCartMockView: View {
         .navigationTitle("Grocery Cart")
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
         .alert("Mock only", isPresented: $showingMockAlert) {
             Button("OK", role: .cancel) { }
         } message: {

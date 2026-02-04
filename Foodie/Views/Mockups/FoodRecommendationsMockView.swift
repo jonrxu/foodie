@@ -55,6 +55,7 @@ struct FoodRecommendationsMockView: View {
         .navigationTitle("Recommendations")
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
         .alert("Mock only", isPresented: $showingMockAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -288,4 +289,3 @@ private struct Pill: View {
         FoodRecommendationsMockView()
     }
 }
-

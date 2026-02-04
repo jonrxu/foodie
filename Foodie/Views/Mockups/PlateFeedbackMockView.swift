@@ -2,157 +2,18 @@
 //  PlateFeedbackMockView.swift
 //  Foodie
 //
-//  Step 3 mock: "plate feedback" screen (macros + coaching).
+//  Mock: plate feedback with diabetes plate model.
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct PlateFeedbackMockView: View {
-    @State private var sampleIndex: Int = 0
-    @State private var showingCopiedAlert = false
-
-    private let samples: [PlateFeedbackSample] = [
-        PlateFeedbackSample(
-            mealName: "Chicken burrito bowl",
-            mealDetails: "Rice, black beans, chicken, salsa, cheese",
-            mealType: "Lunch",
-            estimatedCalories: 660,
-            carbsG: 92,
-            proteinG: 34,
-            fatG: 18,
-            fiberG: 11,
-            addedSugarG: 6,
-            sodiumMg: 980,
-            saturatedFatG: 7,
-            healthScore: 64,
-            healthGrade: "B",
-            tags: ["High sodium", "Carb-heavy", "Good fiber"],
-            whatWentWell: [
-                "Nice mix of fiber + protein (beans + chicken).",
-                "Solid meal volume if you add veggies."
-            ],
-            improvements: [
-                "Carbs are doing most of the work — try a smaller rice portion.",
-                "Sodium is high — watch sauces, cheese, and seasoning."
-            ],
-            smartSwaps: [
-                "Swap half the rice for fajita veggies or lettuce.",
-                "Choose salsa + pico over creamy sauces.",
-                "Add a side fruit for more micronutrients."
-            ],
-            nextMealIdea: "For dinner: roasted salmon + veggies + small serving of rice (aim ~30–40g carbs).",
-            items: [
-                PlateFeedbackItem(name: "Rice", note: "Main carb source", carbsG: 60, proteinG: 5, fatG: 1),
-                PlateFeedbackItem(name: "Black beans", note: "Fiber + protein", carbsG: 22, proteinG: 8, fatG: 1),
-                PlateFeedbackItem(name: "Chicken", note: "Protein anchor", carbsG: 0, proteinG: 19, fatG: 5),
-                PlateFeedbackItem(name: "Cheese", note: "Adds fat + sodium", carbsG: 1, proteinG: 2, fatG: 6),
-                PlateFeedbackItem(name: "Salsa", note: "Low-cal flavor", carbsG: 9, proteinG: 0, fatG: 0)
-            ],
-            coachSummary: "It looks like 58% is carbohydrates — aim to include more veggies and a bit more lean protein next time."
-        ),
-        PlateFeedbackSample(
-            mealName: "Salmon salad",
-            mealDetails: "Salmon, mixed greens, avocado, olive oil",
-            mealType: "Dinner",
-            estimatedCalories: 610,
-            carbsG: 22,
-            proteinG: 38,
-            fatG: 28,
-            fiberG: 9,
-            addedSugarG: 2,
-            sodiumMg: 520,
-            saturatedFatG: 6,
-            healthScore: 86,
-            healthGrade: "A",
-            tags: ["High protein", "Heart-healthy fats", "Low sugar"],
-            whatWentWell: [
-                "Great protein base for satiety and recovery.",
-                "Healthy fats (salmon + avocado) support fullness."
-            ],
-            improvements: [
-                "If you need more energy, add a smart carb portion.",
-                "Keep oils measured so calories don’t creep up."
-            ],
-            smartSwaps: [
-                "Add berries or a small sweet potato for balanced carbs.",
-                "Use lemon + herbs to reduce reliance on dressing.",
-                "Add crunch with cucumbers/peppers instead of croutons."
-            ],
-            nextMealIdea: "For lunch: Greek yogurt bowl with fruit + nuts (aim ~25–35g protein).",
-            items: [
-                PlateFeedbackItem(name: "Salmon", note: "Protein + omega‑3", carbsG: 0, proteinG: 34, fatG: 18),
-                PlateFeedbackItem(name: "Greens", note: "Volume + micronutrients", carbsG: 5, proteinG: 2, fatG: 0),
-                PlateFeedbackItem(name: "Avocado", note: "Healthy fats + fiber", carbsG: 9, proteinG: 2, fatG: 10),
-                PlateFeedbackItem(name: "Olive oil", note: "Adds fat quickly", carbsG: 0, proteinG: 0, fatG: 10),
-                PlateFeedbackItem(name: "Veggies", note: "Fiber + crunch", carbsG: 8, proteinG: 0, fatG: 0)
-            ],
-            coachSummary: "Strong protein and healthy fats — if you want more energy, add a small carb like fruit or sweet potato."
-        ),
-        PlateFeedbackSample(
-            mealName: "Pasta + marinara",
-            mealDetails: "Pasta, marinara, parmesan",
-            mealType: "Dinner",
-            estimatedCalories: 720,
-            carbsG: 110,
-            proteinG: 18,
-            fatG: 14,
-            fiberG: 6,
-            addedSugarG: 8,
-            sodiumMg: 1180,
-            saturatedFatG: 5,
-            healthScore: 52,
-            healthGrade: "C",
-            tags: ["Very carb-heavy", "Low protein", "High sodium"],
-            whatWentWell: [
-                "Comfort meal — easy to improve with small additions."
-            ],
-            improvements: [
-                "Protein is low — add a protein anchor.",
-                "Fiber is low — add vegetables to slow digestion.",
-                "Sodium is high — watch jar sauces and cheese."
-            ],
-            smartSwaps: [
-                "Mix 50/50 regular + chickpea pasta.",
-                "Add lentils or turkey to the sauce.",
-                "Side salad + vinaigrette for fiber and micronutrients."
-            ],
-            nextMealIdea: "Next time: pasta with turkey + spinach + mushrooms (aim ≥25g protein).",
-            items: [
-                PlateFeedbackItem(name: "Pasta", note: "Main carbs", carbsG: 92, proteinG: 14, fatG: 2),
-                PlateFeedbackItem(name: "Marinara", note: "Sodium + sugar varies", carbsG: 14, proteinG: 2, fatG: 3),
-                PlateFeedbackItem(name: "Parmesan", note: "Flavor + sodium", carbsG: 4, proteinG: 2, fatG: 9)
-            ],
-            coachSummary: "Carbs are doing most of the work — aim to add a protein anchor and 2 cups of veggies for balance."
-        )
-    ]
-
-    private var sample: PlateFeedbackSample { samples[sampleIndex % samples.count] }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                flowCard
-                headerCard
-                balancedPlateCard
-                guidanceCard
-                nextMealCard
-                actionsCard
-
-                Button {
-                    sampleIndex = (sampleIndex + 1) % samples.count
-                } label: {
-                    Label("Try another example", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppTheme.primary)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .padding(.top, 4)
+                plateModelCard
+                nutritionCard
+                coachCard
             }
             .padding()
         }
@@ -160,25 +21,57 @@ struct PlateFeedbackMockView: View {
         .navigationTitle("Plate Feedback")
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
-        .alert("Copied", isPresented: $showingCopiedAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Coach feedback copied to clipboard.")
-        }
+        .navigationBarBackButtonHidden(true)
     }
 
-    private var flowCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Demo flow")
-                .font(.headline)
+    private var plateModelCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(uiColor: .tertiarySystemFill))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "fork.knife")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AppTheme.primary)
+                }
 
-            FlowStepRow(
-                steps: [
-                    FlowStep(title: "Nudge", subtitle: "Log your food"),
-                    FlowStep(title: "Log", subtitle: "Talk to the mic"),
-                    FlowStep(title: "Feedback", subtitle: "Your plate")
-                ],
-                activeIndex: 2
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Chicken burrito bowl")
+                        .font(.subheadline).bold()
+                    Text("Lunch")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+
+            HStack {
+                Text("Plate model")
+                    .font(.headline)
+                Spacer()
+                Text("660 cal (est.)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 16) {
+                BalancedPlateRings(vegProgress: 0.7, carbProgress: 0.45, proteinProgress: 0.55)
+                    .frame(width: 140, height: 140)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    PlateLegendRow(color: .green, title: "Non‑starchy vegetables", detail: "Half plate")
+                    PlateLegendRow(color: .orange, title: "Carb foods", detail: "Quarter plate")
+                    PlateLegendRow(color: .red, title: "Protein foods", detail: "Quarter plate")
+                }
+            }
+            .padding(12)
+            .background(Color(uiColor: .systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color(uiColor: .separator).opacity(0.2), lineWidth: 1)
             )
         }
         .padding(14)
@@ -186,304 +79,115 @@ struct PlateFeedbackMockView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.primary.opacity(0.14))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "fork.knife")
-                        .foregroundStyle(AppTheme.primary)
-                        .font(.system(size: 16, weight: .semibold))
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(sample.mealName)
-                        .font(.title3).bold()
-                    Text("\(sample.mealType) • \(sample.mealDetails)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-
-                Spacer()
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var scoreCard: some View {
+    private var nutritionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 10) {
-                Text("Overall")
-                    .font(.headline)
-                Spacer()
-                HealthScoreBadge(score: sample.healthScore, level: sample.healthGrade)
-            }
-
-            Text(sample.coachSummary)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if !sample.tags.isEmpty {
-                let columns = [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)]
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                    ForEach(sample.tags, id: \.self) { tag in
-                        Text(tag)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .background(Color(uiColor: .tertiarySystemFill))
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var balancedPlateCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Balanced plate")
+            Text("Key nutrition details")
                 .font(.headline)
-            Text("Aim for half veggies, a quarter protein, and a quarter carb foods.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            BalancedPlateDiagram()
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
+
+            VStack(spacing: 10) {
+                MetricRow(title: "Fiber", value: "11g", hint: nil, systemImage: "leaf.fill", color: .green)
+                MetricRow(title: "Added sugar", value: "6g", hint: nil, systemImage: "cube.fill", color: .pink)
+                MetricRow(title: "Sodium", value: "980mg", hint: nil, systemImage: "drop.triangle.fill", color: .orange)
+                MetricRow(title: "Sat. fat", value: "7g", hint: nil, systemImage: "flame.fill", color: .red)
+            }
         }
         .padding(14)
         .background(AppTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var guidanceCard: some View {
+    private var coachCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Coach tips")
+            Text("Coach feedback")
                 .font(.headline)
+
             VStack(alignment: .leading, spacing: 10) {
-                AdviceLine(systemImage: "leaf.fill", color: .green, text: "Add extra veggies when you can.")
-                AdviceLine(systemImage: "bolt.fill", color: .blue, text: "Include a protein anchor to feel full longer.")
-                AdviceLine(systemImage: "drop.fill", color: .orange, text: "Choose a small carb portion you enjoy.")
+                Text("What went well")
+                    .font(.subheadline).bold()
+                AdviceLine(systemImage: "checkmark.circle.fill", color: .green, text: "Nice mix of fiber + protein (beans + chicken).")
+                AdviceLine(systemImage: "checkmark.circle.fill", color: .green, text: "Solid meal volume if you add veggies.")
+
+                Divider().opacity(0.3)
+
+                Text("Opportunities")
+                    .font(.subheadline).bold()
+                AdviceLine(systemImage: "wand.and.stars", color: AppTheme.primary, text: "Try a smaller rice portion.")
+                AdviceLine(systemImage: "wand.and.stars", color: AppTheme.primary, text: "Watch sauces and cheese for sodium.")
             }
         }
         .padding(14)
         .background(AppTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
-
-    private var nextMealCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Next step")
-                .font(.headline)
-            AdviceLine(systemImage: "lightbulb.fill", color: .yellow, text: sample.nextMealIdea)
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var actionsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Actions")
-                .font(.headline)
-
-            Button {
-                copyFeedbackToClipboard()
-                showingCopiedAlert = true
-            } label: {
-                Label("Save this tip", systemImage: "bookmark.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(uiColor: .tertiarySystemFill))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private func copyFeedbackToClipboard() {
-        var lines: [String] = []
-        lines.append("Plate feedback — \(sample.mealName)")
-        lines.append("Balanced plate tip:")
-        lines.append("Half veggies, quarter protein, quarter carbs.")
-        lines.append("")
-        lines.append("Coach tips:")
-        lines.append("- Add extra veggies when you can.")
-        lines.append("- Include a protein anchor to feel full longer.")
-        lines.append("- Choose a small carb portion you enjoy.")
-
-        #if canImport(UIKit)
-        UIPasteboard.general.string = lines.joined(separator: "\n")
-        #endif
-    }
 }
 
-private struct PlateFeedbackSample {
-    let mealName: String
-    let mealDetails: String
-    let mealType: String
-    let estimatedCalories: Int
-    let carbsG: Int
-    let proteinG: Int
-    let fatG: Int
-    let fiberG: Int
-    let addedSugarG: Int
-    let sodiumMg: Int
-    let saturatedFatG: Int
-    let healthScore: Int
-    let healthGrade: String
-    let tags: [String]
-    let whatWentWell: [String]
-    let improvements: [String]
-    let smartSwaps: [String]
-    let nextMealIdea: String
-    let items: [PlateFeedbackItem]
-    let coachSummary: String
-}
-
-private struct PlateFeedbackItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let note: String
-    let carbsG: Int
-    let proteinG: Int
-    let fatG: Int
-}
-
-private struct MacroBreakdown {
-    let carbsG: Int
-    let proteinG: Int
-    let fatG: Int
-
-    private var carbsCalories: Int { carbsG * 4 }
-    private var proteinCalories: Int { proteinG * 4 }
-    private var fatCalories: Int { fatG * 9 }
-
-    var totalCalories: Int { max(1, carbsCalories + proteinCalories + fatCalories) }
-
-    var carbsPercent: Int { Int(round(100.0 * Double(carbsCalories) / Double(totalCalories))) }
-    var proteinPercent: Int { Int(round(100.0 * Double(proteinCalories) / Double(totalCalories))) }
-    var fatPercent: Int {
-        let remaining = 100 - carbsPercent - proteinPercent
-        return max(0, remaining)
-    }
-
-    var segments: [MacroSegment] {
-        [
-            MacroSegment(title: "Carbs", fraction: Double(carbsPercent) / 100.0, color: .blue),
-            MacroSegment(title: "Protein", fraction: Double(proteinPercent) / 100.0, color: .green),
-            MacroSegment(title: "Fat", fraction: Double(fatPercent) / 100.0, color: .orange)
-        ]
-    }
-}
-
-private struct MacroSegment: Identifiable {
-    let id = UUID()
-    let title: String
-    let fraction: Double
-    let color: Color
-}
-
-private struct DonutMacroChart: View {
-    let segments: [MacroSegment]
+private struct BalancedPlateRings: View {
+    let vegProgress: CGFloat
+    let carbProgress: CGFloat
+    let proteinProgress: CGFloat
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .stroke(Color(uiColor: .separator).opacity(0.15), lineWidth: 14)
+        ZStack {
+            Ring(progress: vegProgress, color: .green, lineWidth: 12, inset: 2)
+            Ring(progress: proteinProgress, color: .red, lineWidth: 12, inset: 18)
+            Ring(progress: carbProgress, color: .orange, lineWidth: 12, inset: 34)
 
-                ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
-                    Circle()
-                        .trim(from: startTrim(for: index), to: endTrim(for: index))
-                        .stroke(segment.color, style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }
-            }
-            .frame(width: 84, height: 84)
-
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(segments) { segment in
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(segment.color)
-                            .frame(width: 10, height: 10)
-                        Text(segment.title)
-                            .font(.subheadline).bold()
-                        Spacer()
-                        Text("\(Int(round(segment.fraction * 100)))%")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
+            EmptyView()
         }
-        .padding(12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private func startTrim(for index: Int) -> CGFloat {
-        let prior = segments.prefix(index).reduce(0.0) { $0 + $1.fraction }
-        return CGFloat(prior)
-    }
-
-    private func endTrim(for index: Int) -> CGFloat {
-        let prior = segments.prefix(index + 1).reduce(0.0) { $0 + $1.fraction }
-        return CGFloat(prior)
     }
 }
 
-private struct MacroRow: View {
-    let title: String
-    let grams: Int
-    let percent: Int
+private struct Ring: View {
+    let progress: CGFloat
     let color: Color
-    let systemImage: String
+    let lineWidth: CGFloat
+    let inset: CGFloat
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 18)
-
-            Text(title)
-                .font(.subheadline).bold()
-                .frame(width: 70, alignment: .leading)
-
-            Spacer()
-
-            Text("\(grams)g")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Text("\(percent)%")
-                .font(.subheadline).bold()
-                .foregroundStyle(color)
-                .frame(width: 48, alignment: .trailing)
+        ZStack {
+            Circle()
+                .stroke(color.opacity(0.15), lineWidth: lineWidth)
+                .padding(inset)
+            Circle()
+                .trim(from: 0, to: min(max(progress, 0), 1))
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [color.opacity(0.7), color]),
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .padding(inset)
         }
-        .padding(.vertical, 2)
+    }
+}
+
+private struct PlateLegendRow: View {
+    let color: Color
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline).bold()
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
 private struct MetricRow: View {
     let title: String
     let value: String
-    let hint: String
+    let hint: String?
     let systemImage: String
     let color: Color
 
@@ -504,44 +208,14 @@ private struct MetricRow: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                Text(hint)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-private struct FlowStep: Identifiable {
-    let id = UUID()
-    let title: String
-    let subtitle: String
-}
-
-private struct FlowStepRow: View {
-    let steps: [FlowStep]
-    let activeIndex: Int
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ForEach(Array(steps.enumerated()), id: \.element.id) { idx, step in
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(idx <= activeIndex ? AppTheme.primary : Color(uiColor: .separator).opacity(0.35))
-                            .frame(width: 10, height: 10)
-                        Text(step.title)
-                            .font(.subheadline).bold()
-                            .foregroundStyle(idx == activeIndex ? .primary : .secondary)
-                    }
-                    Text(step.subtitle)
+                if let hint {
+                    Text(hint)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .padding(.vertical, 2)
     }
 }
 
@@ -550,4 +224,3 @@ private struct FlowStepRow: View {
         PlateFeedbackMockView()
     }
 }
-

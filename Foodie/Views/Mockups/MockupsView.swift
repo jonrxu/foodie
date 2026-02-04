@@ -15,7 +15,7 @@ struct MockupsView: View {
                     PatientOnboardingStepOneView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Onboarding • About you (Step 1)")
+                        Text("About you (Step 1)")
                             .font(.headline)
                         Text("Diet, low sodium, dislikes, activity level")
                             .font(.subheadline)
@@ -28,9 +28,9 @@ struct MockupsView: View {
                     MealPreferenceMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Onboarding • Meal preferences")
+                        Text("Meal preferences (Step 2)")
                             .font(.headline)
-                        Text("Select meal focus + meal types")
+                        Text("Select focus areas + meal types")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -41,26 +41,26 @@ struct MockupsView: View {
                     ShoppingCartMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Cart • Shopping cart list")
+                        Text("Shopping cart (Step 3)")
                             .font(.headline)
-                        Text("Tagged items + Order button")
+                        Text("Tagged items + order button")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 6)
                 }
             } header: {
-                Text("Mockup 1")
+                Text("Mockup 1 • Onboarding → Cart")
             }
 
             Section {
                 NavigationLink {
-                    PlateFeedbackMockView()
+                    FoodLoggingMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Step 3 • Plate feedback")
+                        Text("Log a meal (Step 1)")
                             .font(.headline)
-                        Text("Show macro breakdown and coaching suggestions")
+                        Text("Voice, photo, text, or barcode")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -68,12 +68,12 @@ struct MockupsView: View {
                 }
 
                 NavigationLink {
-                    FoodLoggingMockView()
+                    PlateFeedbackMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Step 2 • Log food (voice / photo / text)")
+                        Text("Plate feedback (Step 2)")
                             .font(.headline)
-                        Text("Mock multi-modal logging options (visuals only)")
+                        Text("Balanced plate ring + simple tips")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -84,16 +84,16 @@ struct MockupsView: View {
                     GroceryCartMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Grocery cart • Sample generated cart")
+                        Text("Grocery cart (Step 3)")
                             .font(.headline)
-                        Text("Mock cart with items, prices, and checkout CTAs")
+                        Text("Generated cart + checkout")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 6)
                 }
             } header: {
-                Text("Food logging demo flow")
+                Text("Mockup 2 • Food logging")
             }
 
             Section {

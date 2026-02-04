@@ -36,6 +36,7 @@ struct WeeklyGlucoseOverviewMockView: View {
         .navigationTitle("Weekly Glucose")
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
     }
 
     private var headerCard: some View {

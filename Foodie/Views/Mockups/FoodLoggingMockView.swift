@@ -14,7 +14,7 @@ struct FoodLoggingMockView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                heroHeader
+                header
                 entryOptions
                 recentMock
             }
@@ -24,6 +24,7 @@ struct FoodLoggingMockView: View {
         .navigationTitle("Log Your Meal")
         .navigationBarTitleDisplayMode(.inline)
         .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
         .alert("Mock only", isPresented: $showingMockAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -31,25 +32,19 @@ struct FoodLoggingMockView: View {
         }
     }
 
-    private var heroHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("What did you eat?")
-                .font(.title).bold()
-            Text("Choose how you want to log — voice, photo, or text.")
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Log a meal")
+                .font(.title2).bold()
+            Text("Pick a simple way to add your meal.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var entryOptions: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Log options")
-                .font(.headline)
-
             let columns = [
                 GridItem(.flexible(), spacing: 12),
                 GridItem(.flexible(), spacing: 12)
@@ -82,6 +77,15 @@ struct FoodLoggingMockView: View {
                 ) {
                     tap("Text log")
                 }
+
+                MockOptionCard(
+                    title: "Barcode",
+                    subtitle: "Scan items",
+                    systemImage: "barcode.viewfinder",
+                    tint: .blue
+                ) {
+                    tap("Barcode scan")
+                }
             }
 
             Button {
@@ -96,9 +100,6 @@ struct FoodLoggingMockView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var recentMock: some View {
@@ -152,8 +153,12 @@ private struct MockOptionCard: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .background(Color(uiColor: .systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color(uiColor: .separator).opacity(0.25), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -201,4 +206,3 @@ private struct MockLogRow: View {
         FoodLoggingMockView()
     }
 }
-
