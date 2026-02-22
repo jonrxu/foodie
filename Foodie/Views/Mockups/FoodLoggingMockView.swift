@@ -68,15 +68,15 @@ struct FoodLoggingMockView: View {
             colors: [
                 .white,
                 .white,
-                AppTheme.primary.opacity(0.03),
-                AppTheme.primary.opacity(0.06)
+                AppTheme.primary.opacity(0.004),
+                AppTheme.primary.opacity(0.014)
             ],
             startPoint: .top,
             endPoint: .bottom
         )
         .overlay(
             RadialGradient(
-                colors: [AppTheme.primary.opacity(0.05), .clear],
+                colors: [AppTheme.primary.opacity(0.012), .clear],
                 center: UnitPoint(x: 0.5, y: 0.92),
                 startRadius: 20,
                 endRadius: 360

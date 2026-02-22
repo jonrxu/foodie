@@ -43,7 +43,7 @@ struct PlateFeedbackMockView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                    Spacer(minLength: 18)
+                    Spacer(minLength: 14)
                     trendCard
                     Spacer(minLength: 26)
                     coachBubble
@@ -69,25 +69,21 @@ struct PlateFeedbackMockView: View {
             Text("Analyzing your meal")
                 .font(.system(size: 33, weight: .bold, design: .rounded))
 
-            Text("Estimated sugar response over the next 2 hours")
-                .font(.title3)
+            Text("Quick look at your next 2 hours")
+                .font(.headline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
     }
 
     private var trendCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Your sugar trend")
+                Text("Predicted glucose spike")
                     .font(.title3).bold()
                 Spacer()
                 Text("2h estimate")
-                    .font(.caption).bold()
-                    .foregroundStyle(.blue.opacity(0.72))
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.blue.opacity(0.08))
-                    .clipShape(Capsule())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
 
             GlucoseImpactChart(
@@ -95,8 +91,7 @@ struct PlateFeedbackMockView: View {
                 withoutMeal: impact.withoutMeal
             )
             .frame(height: 214)
-            .padding(.top, 10)
-            .padding(.horizontal, 4)
+            .padding(.top, 8)
 
             HStack(spacing: 16) {
                 TrendLegendLine(color: .blue, style: .solid, text: "With this meal")
@@ -104,7 +99,13 @@ struct PlateFeedbackMockView: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
         }
-        .padding(.horizontal, 2)
+        .padding(16)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.blue.opacity(0.12), lineWidth: 1)
+        )
     }
 
     private var coachBubble: some View {
@@ -122,7 +123,7 @@ struct PlateFeedbackMockView: View {
                 Text("AI Coach")
                     .font(.caption).bold()
                     .foregroundStyle(.secondary)
-                Text("Nice overall balance. You may see a short spike, then a cooldown. Next time, try swapping fries for a side salad to make the rise gentler.")
+                Text("Nice balance overall. Expect a short rise, then cooldown. Next time, swap fries for a side salad.")
                     .font(.body)
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
