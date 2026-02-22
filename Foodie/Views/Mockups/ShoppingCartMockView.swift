@@ -10,13 +10,11 @@ import SwiftUI
 struct ShoppingCartMockView: View {
     @Environment(\.dismiss) private var dismiss
     private let items: [CartItem] = [
-        CartItem(name: "Bananas", detail: "4 each", tags: ["Fresh Produce"]),
-        CartItem(name: "Apples", detail: "4 each", tags: ["Fresh Produce", "Fiber-rich"]),
-        CartItem(name: "Eggs", detail: "1 dozen", tags: ["Protein"]),
-        CartItem(name: "Whole-grain bread", detail: "1 loaf", tags: ["Whole Grain"]),
-        CartItem(name: "Chicken breast", detail: "1.5 lb", tags: ["Protein"]),
-        CartItem(name: "Greek yogurt", detail: "32 oz", tags: ["Protein", "Dairy"]),
-        CartItem(name: "Broccoli", detail: "2 crowns", tags: ["Fresh Produce", "Fiber-rich"])
+        CartItem(name: "Bananas", detail: "Qty: 4 each", tags: ["Fresh Produce"]),
+        CartItem(name: "Apples", detail: "Qty: 4 each", tags: ["Fresh Produce"]),
+        CartItem(name: "Eggs", detail: "Qty: 1 dozen", tags: ["Protein"]),
+        CartItem(name: "Whole-grain bread", detail: "Qty: 1 loaf", tags: ["Whole Grain"]),
+        CartItem(name: "Chicken breast", detail: "Qty: 1.5 lb", tags: ["Protein"])
     ]
 
     var body: some View {
@@ -34,7 +32,7 @@ struct ShoppingCartMockView: View {
                     dismiss()
                 } label: {
                     Text("Order on Instacart")
-                        .font(.headline)
+                        .font(.title3).bold()
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(AppTheme.primary)
@@ -57,21 +55,10 @@ struct ShoppingCartMockView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Your Shopping Cart")
-                    .font(.title3).bold()
-                Text("Monday, April 15th, 2025")
-                    .font(.caption)
+                    .font(.title2).bold()
+                Text("5 items ready to order")
+                    .font(.body)
                     .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("$124.50")
-                    .font(.title3).bold()
-                    .foregroundStyle(.green)
-                Text("-$32.40")
-                    .font(.caption)
-                    .foregroundStyle(.red)
             }
         }
     }
@@ -101,11 +88,11 @@ private struct CartRow: View {
                 .fill(accentColor(for: item).opacity(0.18))
                 .frame(width: 6)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(item.name)
-                    .font(.subheadline).bold()
+                    .font(.title3).bold()
                 Text(item.detail)
-                    .font(.caption)
+                    .font(.body)
                     .foregroundStyle(.secondary)
 
                 if !item.tags.isEmpty {
@@ -119,12 +106,8 @@ private struct CartRow: View {
             }
 
             Spacer()
-
-            Image(systemName: "pencil")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
         }
-        .padding(12)
+        .padding(14)
         .background(
             LinearGradient(
                 colors: [AppTheme.card, AppTheme.card.opacity(0.95)],
@@ -149,11 +132,11 @@ private struct TagPill: View {
     let text: String
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.caption2).bold()
+        Text(text)
+            .font(.subheadline).bold()
             .foregroundStyle(color(for: text))
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .padding(.horizontal, 9)
             .background(color(for: text).opacity(0.14))
             .clipShape(Capsule())
     }

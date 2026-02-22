@@ -2,7 +2,7 @@
 //  FoodLoggingMockView.swift
 //  Foodie
 //
-//  Step 2 mock: multi-modal food logging (visuals only).
+//  Simple survey mock: centered photo/voice widgets.
 //
 
 import SwiftUI
@@ -10,187 +10,141 @@ import SwiftUI
 struct FoodLoggingMockView: View {
     @Environment(\.dismiss) private var dismiss
 
+    private let modes: [LoggingMode] = [
+        LoggingMode(title: "Scan Photo", systemImage: "camera.fill", tint: Color(red: 0.14, green: 0.53, blue: 0.96)),
+        LoggingMode(title: "Voice Log", systemImage: "mic.fill", tint: Color(red: 0.05, green: 0.66, blue: 0.62)),
+        LoggingMode(title: "Barcode Scan", systemImage: "barcode.viewfinder", tint: Color(red: 0.95, green: 0.61, blue: 0.16)),
+        LoggingMode(title: "Text Log", systemImage: "text.bubble.fill", tint: Color(red: 0.91, green: 0.37, blue: 0.44))
+    ]
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                entryOptions
-                recentMock
+        VStack(spacing: 0) {
+            header
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 14),
+                    GridItem(.flexible(), spacing: 14)
+                ],
+                spacing: 14
+            ) {
+                ForEach(modes, id: \.title) { mode in
+                    LoggingModeCard(
+                        title: mode.title,
+                        systemImage: mode.systemImage,
+                        tint: mode.tint,
+                        action: dismissCurrentScreen
+                    )
+                }
             }
-            .padding()
+            .frame(maxWidth: 370)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 34)
+
+            Spacer()
         }
-        .background(AppTheme.background)
-        .navigationTitle("Log Your Meal")
-        .navigationBarTitleDisplayMode(.inline)
+        .padding(.horizontal, 20)
+        .padding(.top, 124)
+        .padding(.bottom, 24)
+        .background(pageBackground)
+        .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Log a meal")
-                .font(.title2).bold()
-            Text("Pick a simple way to add your meal.")
-                .font(.subheadline)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Log your meal")
+                .font(.system(size: 33, weight: .bold, design: .rounded))
+            Text("Choose one simple way to add food")
+                .font(.headline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var entryOptions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            let columns = [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ]
-
-            LazyVGrid(columns: columns, spacing: 12) {
-                MockOptionCard(
-                    title: "Voice",
-                    subtitle: "Fastest",
-                    systemImage: "mic.fill",
-                    tint: AppTheme.primary
-                ) {
-                    tap("Voice log")
-                }
-
-                MockOptionCard(
-                    title: "Photo",
-                    subtitle: "Snap a plate",
-                    systemImage: "camera.fill",
-                    tint: .orange
-                ) {
-                    tap("Photo log")
-                }
-
-                MockOptionCard(
-                    title: "Text",
-                    subtitle: "Type it",
-                    systemImage: "text.bubble.fill",
-                    tint: .green
-                ) {
-                    tap("Text log")
-                }
-
-                MockOptionCard(
-                    title: "Barcode",
-                    subtitle: "Scan items",
-                    systemImage: "barcode.viewfinder",
-                    tint: .blue
-                ) {
-                    tap("Barcode scan")
-                }
-            }
-
-            Button {
-                tap("Start voice")
-            } label: {
-                Label("Start voice log", systemImage: "waveform")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(AppTheme.primary)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-        }
+    private var pageBackground: some View {
+        LinearGradient(
+            colors: [
+                .white,
+                .white,
+                AppTheme.primary.opacity(0.03),
+                AppTheme.primary.opacity(0.06)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .overlay(
+            RadialGradient(
+                colors: [AppTheme.primary.opacity(0.05), .clear],
+                center: UnitPoint(x: 0.5, y: 0.92),
+                startRadius: 20,
+                endRadius: 360
+            )
+        )
+        .ignoresSafeArea()
     }
 
-    private var recentMock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent logs")
-                .font(.headline)
-
-            VStack(spacing: 10) {
-                MockLogRow(title: "Greek yogurt + berries", subtitle: "Breakfast", badge: "Done")
-                MockLogRow(title: "Chicken burrito bowl", subtitle: "Lunch", badge: "Done")
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private func tap(_ name: String) {
+    private func dismissCurrentScreen() {
         dismiss()
     }
 }
 
-private struct MockOptionCard: View {
+private struct LoggingMode {
     let title: String
-    let subtitle: String
+    let systemImage: String
+    let tint: Color
+}
+
+private struct LoggingModeCard: View {
+    let title: String
     let systemImage: String
     let tint: Color
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(tint.opacity(0.12))
-                        .frame(height: 44)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(tint.opacity(0.16))
+                        .frame(width: 72, height: 72)
                     Image(systemName: systemImage)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(tint)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline).bold()
-                        .foregroundStyle(.primary)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(uiColor: .systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color(uiColor: .separator).opacity(0.25), lineWidth: 1)
+            .frame(maxWidth: .infinity)
+            .frame(height: 168)
+            .background(
+                LinearGradient(
+                    colors: [.white, tint.opacity(0.08)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             )
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(tint.opacity(0.26), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 5)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScaleOnPressStyle())
     }
 }
 
-private struct MockLogRow: View {
-    let title: String
-    let subtitle: String
-    let badge: String
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline).bold()
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Text(badge)
-                .font(.caption).bold()
-                .foregroundStyle(.white)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 10)
-                .background(
-                    LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.primary.opacity(0.65)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .clipShape(Capsule())
-        }
-        .padding(12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+private struct ScaleOnPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

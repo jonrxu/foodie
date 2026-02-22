@@ -2,220 +2,424 @@
 //  PlateFeedbackMockView.swift
 //  Foodie
 //
-//  Mock: plate feedback with diabetes plate model.
+//  Sleek survey mock: smooth post-meal glucose trend + simple coach guidance.
 //
 
 import SwiftUI
 
 struct PlateFeedbackMockView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let impact = MealGlucoseImpact(
+        withMeal: [
+            GlucosePoint(minute: 0, glucose: 118),
+            GlucosePoint(minute: 10, glucose: 132),
+            GlucosePoint(minute: 20, glucose: 148),
+            GlucosePoint(minute: 30, glucose: 156),
+            GlucosePoint(minute: 42, glucose: 151),
+            GlucosePoint(minute: 55, glucose: 145),
+            GlucosePoint(minute: 68, glucose: 147),
+            GlucosePoint(minute: 82, glucose: 137),
+            GlucosePoint(minute: 96, glucose: 131),
+            GlucosePoint(minute: 108, glucose: 125),
+            GlucosePoint(minute: 120, glucose: 122)
+        ],
+        withoutMeal: [
+            GlucosePoint(minute: 0, glucose: 118),
+            GlucosePoint(minute: 24, glucose: 116.8),
+            GlucosePoint(minute: 48, glucose: 115.7),
+            GlucosePoint(minute: 72, glucose: 114.6),
+            GlucosePoint(minute: 92, glucose: 114.9),
+            GlucosePoint(minute: 108, glucose: 114.1),
+            GlucosePoint(minute: 120, glucose: 113.6)
+        ]
+    )
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                plateModelCard
-                nutritionCard
-                coachCard
+        GeometryReader { geo in
+            ZStack {
+                pageBackground
+                    .ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    Spacer(minLength: 18)
+                    trendCard
+                    Spacer(minLength: 26)
+                    coachBubble
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 18)
+                .padding(.trailing, 18)
+                .padding(.top, 62)
+                .padding(.bottom, 24)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
             }
-            .padding()
         }
-        .background(AppTheme.background)
-        .navigationTitle("Plate Feedback")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
+        .onTapGesture {
+            dismiss()
+        }
     }
 
-    private var plateModelCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(uiColor: .tertiarySystemFill))
-                        .frame(width: 46, height: 46)
-                    Image(systemName: "fork.knife")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(AppTheme.primary)
-                }
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Analyzing your meal")
+                .font(.system(size: 33, weight: .bold, design: .rounded))
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Chicken burrito bowl")
-                        .font(.subheadline).bold()
-                    Text("Lunch")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            Text("Estimated sugar response over the next 2 hours")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+        }
+    }
 
-                Spacer()
-            }
-
+    private var trendCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Plate model")
-                    .font(.headline)
+                Text("Your sugar trend")
+                    .font(.title3).bold()
                 Spacer()
-                Text("660 cal (est.)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text("2h estimate")
+                    .font(.caption).bold()
+                    .foregroundStyle(.blue.opacity(0.72))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.blue.opacity(0.08))
+                    .clipShape(Capsule())
             }
+
+            GlucoseImpactChart(
+                withMeal: impact.withMeal,
+                withoutMeal: impact.withoutMeal
+            )
+            .frame(height: 214)
+            .padding(.top, 10)
+            .padding(.horizontal, 4)
 
             HStack(spacing: 16) {
-                BalancedPlateRings(vegProgress: 0.7, carbProgress: 0.45, proteinProgress: 0.55)
-                    .frame(width: 140, height: 140)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    PlateLegendRow(color: .green, title: "Non‑starchy vegetables", detail: "Half plate")
-                    PlateLegendRow(color: .orange, title: "Carb foods", detail: "Quarter plate")
-                    PlateLegendRow(color: .red, title: "Protein foods", detail: "Quarter plate")
-                }
+                TrendLegendLine(color: .blue, style: .solid, text: "With this meal")
+                TrendLegendLine(color: .blue.opacity(0.35), style: .dashed, text: "Without")
             }
-            .padding(12)
-            .background(Color(uiColor: .systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    private var coachBubble: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(AppTheme.primary.opacity(0.2))
+                    .frame(width: 34, height: 34)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppTheme.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("AI Coach")
+                    .font(.caption).bold()
+                    .foregroundStyle(.secondary)
+                Text("Nice overall balance. You may see a short spike, then a cooldown. Next time, try swapping fries for a side salad to make the rise gentler.")
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(15)
+            .background(.white.opacity(0.96))
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color(uiColor: .separator).opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.blue.opacity(0.14), lineWidth: 1)
             )
         }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.leading, 2)
     }
 
-    private var nutritionCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Key nutrition details")
-                .font(.headline)
-
-            VStack(spacing: 10) {
-                MetricRow(title: "Fiber", value: "11g", hint: nil, systemImage: "leaf.fill", color: .green)
-                MetricRow(title: "Added sugar", value: "6g", hint: nil, systemImage: "cube.fill", color: .pink)
-                MetricRow(title: "Sodium", value: "980mg", hint: nil, systemImage: "drop.triangle.fill", color: .orange)
-                MetricRow(title: "Sat. fat", value: "7g", hint: nil, systemImage: "flame.fill", color: .red)
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var coachCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Coach feedback")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("What went well")
-                    .font(.subheadline).bold()
-                AdviceLine(systemImage: "checkmark.circle.fill", color: .green, text: "Nice mix of fiber + protein (beans + chicken).")
-                AdviceLine(systemImage: "checkmark.circle.fill", color: .green, text: "Solid meal volume if you add veggies.")
-
-                Divider().opacity(0.3)
-
-                Text("Opportunities")
-                    .font(.subheadline).bold()
-                AdviceLine(systemImage: "wand.and.stars", color: AppTheme.primary, text: "Try a smaller rice portion.")
-                AdviceLine(systemImage: "wand.and.stars", color: AppTheme.primary, text: "Watch sauces and cheese for sodium.")
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-private struct BalancedPlateRings: View {
-    let vegProgress: CGFloat
-    let carbProgress: CGFloat
-    let proteinProgress: CGFloat
-
-    var body: some View {
+    private var pageBackground: some View {
         ZStack {
-            Ring(progress: vegProgress, color: .green, lineWidth: 12, inset: 2)
-            Ring(progress: proteinProgress, color: .red, lineWidth: 12, inset: 18)
-            Ring(progress: carbProgress, color: .orange, lineWidth: 12, inset: 34)
+            Color.white
 
-            EmptyView()
+            LinearGradient(
+                colors: [
+                    .white,
+                    .white,
+                    Color.blue.opacity(0.003),
+                    Color.blue.opacity(0.012)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            RadialGradient(
+                colors: [Color.blue.opacity(0.012), Color.blue.opacity(0.0)],
+                center: UnitPoint(x: 0.5, y: 0.78),
+                startRadius: 60,
+                endRadius: 520
+            )
         }
     }
 }
 
-private struct Ring: View {
-    let progress: CGFloat
-    let color: Color
-    let lineWidth: CGFloat
-    let inset: CGFloat
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(color.opacity(0.15), lineWidth: lineWidth)
-                .padding(inset)
-            Circle()
-                .trim(from: 0, to: min(max(progress, 0), 1))
-                .stroke(
-                    AngularGradient(
-                        gradient: Gradient(colors: [color.opacity(0.7), color]),
-                        center: .center
-                    ),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .padding(inset)
-        }
-    }
+private struct GlucosePoint {
+    let minute: Double
+    let glucose: Double
 }
 
-private struct PlateLegendRow: View {
-    let color: Color
-    let title: String
-    let detail: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(color)
-                .frame(width: 10, height: 10)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline).bold()
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
+private struct MealGlucoseImpact {
+    let withMeal: [GlucosePoint]
+    let withoutMeal: [GlucosePoint]
 }
 
-private struct MetricRow: View {
-    let title: String
-    let value: String
-    let hint: String?
-    let systemImage: String
-    let color: Color
+private struct GlucoseImpactChart: View {
+    let withMeal: [GlucosePoint]
+    let withoutMeal: [GlucosePoint]
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 18)
-                .padding(.top, 2)
+        GeometryReader { geo in
+            let width = geo.size.width
+            let height = geo.size.height
+            let topInset: CGFloat = 12
+            let bottomInset: CGFloat = 30
+            let leftInset: CGFloat = 40
+            let rightInset: CGFloat = 12
+            let plotWidth = max(1, width - leftInset - rightInset)
+            let plotHeight = max(1, height - topInset - bottomInset)
+            let allPoints = withMeal + withoutMeal
+            let rawMinGlucose = allPoints.map(\.glucose).min() ?? 100
+            let rawMaxGlucose = allPoints.map(\.glucose).max() ?? 160
+            let minGlucose = floor((rawMinGlucose - 8) / 10) * 10
+            let maxGlucose = ceil((rawMaxGlucose + 8) / 10) * 10
+            let maxMinute = max(allPoints.map(\.minute).max() ?? 120, 1)
+            let yTicks = axisTicks(min: minGlucose, max: maxGlucose)
+            let fadeFloorY = yPosition(
+                for: minGlucose,
+                minGlucose: minGlucose,
+                maxGlucose: maxGlucose,
+                topInset: topInset,
+                plotHeight: plotHeight
+            )
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text(title)
-                        .font(.subheadline).bold()
+            let mealCurve = chartPoints(
+                for: withMeal,
+                maxMinute: maxMinute,
+                leftInset: leftInset,
+                plotWidth: plotWidth,
+                minGlucose: minGlucose,
+                maxGlucose: maxGlucose,
+                topInset: topInset,
+                plotHeight: plotHeight
+            )
+            let baselineCurve = chartPoints(
+                for: withoutMeal,
+                maxMinute: maxMinute,
+                leftInset: leftInset,
+                plotWidth: plotWidth,
+                minGlucose: minGlucose,
+                maxGlucose: maxGlucose,
+                topInset: topInset,
+                plotHeight: plotHeight
+            )
+            let bottomY = height - bottomInset
+
+            ZStack {
+                ForEach(yTicks, id: \.self) { tick in
+                    let y = yPosition(
+                        for: Double(tick),
+                        minGlucose: minGlucose,
+                        maxGlucose: maxGlucose,
+                        topInset: topInset,
+                        plotHeight: plotHeight
+                    )
+
+                    Path { path in
+                        path.move(to: CGPoint(x: leftInset, y: y))
+                        path.addLine(to: CGPoint(x: width - rightInset, y: y))
+                    }
+                    .stroke(Color.blue.opacity(0.1), style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+
+                    Text("\(tick)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .position(x: 18, y: y)
+                }
+
+                smoothedAreaPath(mealCurve, bottomY: fadeFloorY)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.13), Color.blue.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                smoothedPath(baselineCurve)
+                    .stroke(
+                        Color.blue.opacity(0.3),
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: [6, 5])
+                    )
+
+                smoothedPath(mealCurve)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.9), Color.blue.opacity(0.82)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 3.4, lineCap: .round, lineJoin: .round)
+                    )
+
+                VStack {
                     Spacer()
-                    Text(value)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                if let hint {
-                    Text(hint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("Now")
+                        Spacer()
+                        Text("1h")
+                        Spacer()
+                        Text("2h")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, leftInset)
+                    .padding(.trailing, rightInset)
+                    .padding(.bottom, 4)
                 }
             }
         }
-        .padding(.vertical, 2)
+    }
+
+    private func axisTicks(min: Double, max: Double) -> [Int] {
+        let high = Int((max / 10).rounded(.up) * 10)
+        let low = Int((min / 10).rounded(.down) * 10)
+        let mid = Int((Double(high + low) / 2).rounded())
+        return [high, mid, low]
+    }
+
+    private func chartPoints(
+        for data: [GlucosePoint],
+        maxMinute: Double,
+        leftInset: CGFloat,
+        plotWidth: CGFloat,
+        minGlucose: Double,
+        maxGlucose: Double,
+        topInset: CGFloat,
+        plotHeight: CGFloat
+    ) -> [CGPoint] {
+        data.map { point in
+            CGPoint(
+                x: xPosition(for: point.minute, maxMinute: maxMinute, width: plotWidth) + leftInset,
+                y: yPosition(
+                    for: point.glucose,
+                    minGlucose: minGlucose,
+                    maxGlucose: maxGlucose,
+                    topInset: topInset,
+                    plotHeight: plotHeight
+                )
+            )
+        }
+    }
+
+    private func smoothedPath(_ points: [CGPoint]) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+
+        guard points.count > 1 else { return path }
+        for index in 1..<points.count {
+            let previous = points[index - 1]
+            let current = points[index]
+            let mid = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
+            path.addQuadCurve(to: mid, control: previous)
+        }
+
+        if let last = points.last, let secondLast = points.dropLast().last {
+            path.addQuadCurve(to: last, control: secondLast)
+        }
+        return path
+    }
+
+    private func smoothedAreaPath(_ points: [CGPoint], bottomY: CGFloat) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: CGPoint(x: first.x, y: bottomY))
+        path.addLine(to: first)
+
+        if points.count > 1 {
+            for index in 1..<points.count {
+                let previous = points[index - 1]
+                let current = points[index]
+                let mid = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
+                path.addQuadCurve(to: mid, control: previous)
+            }
+            if let last = points.last, let secondLast = points.dropLast().last {
+                path.addQuadCurve(to: last, control: secondLast)
+                path.addLine(to: CGPoint(x: last.x, y: bottomY))
+            }
+        } else {
+            path.addLine(to: CGPoint(x: first.x, y: bottomY))
+        }
+
+        path.closeSubpath()
+        return path
+    }
+
+    private func xPosition(for minute: Double, maxMinute: Double, width: CGFloat) -> CGFloat {
+        CGFloat(minute / maxMinute) * width
+    }
+
+    private func yPosition(
+        for glucose: Double,
+        minGlucose: Double,
+        maxGlucose: Double,
+        topInset: CGFloat,
+        plotHeight: CGFloat
+    ) -> CGFloat {
+        let denominator = max(maxGlucose - minGlucose, 1)
+        let ratio = (glucose - minGlucose) / denominator
+        return topInset + (1 - CGFloat(ratio)) * plotHeight
+    }
+}
+
+private enum TrendLegendStyle {
+    case solid
+    case dashed
+}
+
+private struct TrendLegendLine: View {
+    let color: Color
+    let style: TrendLegendStyle
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            lineSample
+                .frame(width: 22, height: 6)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var lineSample: some View {
+        switch style {
+        case .solid:
+            Capsule().fill(color)
+        case .dashed:
+            DashedLineShape()
+                .stroke(color, style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+        }
+    }
+}
+
+private struct DashedLineShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
     }
 }
 

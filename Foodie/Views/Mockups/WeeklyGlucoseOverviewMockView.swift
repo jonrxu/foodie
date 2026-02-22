@@ -2,34 +2,29 @@
 //  WeeklyGlucoseOverviewMockView.swift
 //  Foodie
 //
-//  CGM demo (Slide 2): weekly overview of glucose + key stats.
+//  Simple survey mock: one clear weekly CGM graph with target range.
 //
 
 import SwiftUI
-import Foundation
 
 struct WeeklyGlucoseOverviewMockView: View {
     @Environment(\.dismiss) private var dismiss
-    private let sample = CGMWeeklySample(
+
+    private let sample = CGMSimpleWeeklySample(
         timeInRangePercent: 78,
-        avgGlucose: 118,
-        gmi: 6.1,
-        variabilityPercent: 29,
-        lowsCount: 2,
-        highsCount: 5,
-        estimatedA1cText: "Est. A1C 6.1%",
-        weekLabel: "Last 7 days",
+        targetTimeInRangePercent: 70,
+        targetLow: 70,
+        targetHigh: 180,
         dayLabels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        dailyTIR: [74, 80, 69, 83, 77, 81, 78],
-        dailyAvg: [122, 116, 128, 112, 119, 115, 118]
+        glucoseValues: [126, 158, 136, 172, 148, 132, 141]
     )
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                headerCard
-                timeInRangeCard
-                weeklyPatternCard
+                summaryCard
+                weeklyGraphCard
+                Spacer(minLength: 8)
             }
             .padding()
         }
@@ -42,15 +37,14 @@ struct WeeklyGlucoseOverviewMockView: View {
                     Text("Get Recommendations")
                         .font(.headline)
                         .padding(.horizontal, 22)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 11)
                         .background(AppTheme.primary)
                         .foregroundStyle(.white)
                         .clipShape(Capsule())
                 }
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .background(Color(uiColor: .systemBackground))
         }
         .background(AppTheme.background)
@@ -60,99 +54,48 @@ struct WeeklyGlucoseOverviewMockView: View {
         .navigationBarBackButtonHidden(true)
     }
 
-    private var headerCard: some View {
+    private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(AppTheme.primary.opacity(0.12))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(AppTheme.primary)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("CGM overview")
-                        .font(.headline)
-                    Text("Last week")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Text("Weekly snapshot")
-                    .font(.caption).bold()
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color(uiColor: .tertiarySystemFill))
-                    .clipShape(Capsule())
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var timeInRangeCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Weekly summary")
+            Text("Goal time in range: \(sample.targetTimeInRangePercent)%+")
                 .font(.headline)
 
             HStack {
-                Text("Time in range")
-                    .font(.subheadline).bold()
+                Text("This week")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(sample.timeInRangePercent)%")
-                    .font(.subheadline).bold()
+                Text("\(sample.timeInRangePercent)% in range")
+                    .font(.title3).bold()
                     .foregroundStyle(AppTheme.primary)
             }
-
-            Text("Goal: 70–180 mg/dL")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
 
             ProgressView(value: Double(sample.timeInRangePercent), total: 100)
                 .tint(AppTheme.primary)
 
-            Text("You stayed in range most days.")
+            Text("Target glucose range: \(sample.targetLow)-\(sample.targetHigh) mg/dL")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var weeklyGraphCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Weekly fluctuations")
+                .font(.headline)
+            Text("Green area = target range")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 10) {
-                MetricPill(systemImage: "arrow.down.right", text: "2 lows", color: .red)
-                MetricPill(systemImage: "arrow.up.right", text: "5 highs", color: .orange)
-                MetricPill(systemImage: "chart.line.uptrend.xyaxis", text: "Variability", color: .blue)
-            }
-        }
-        .padding(14)
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var weeklyPatternCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Weekly pattern")
-                    .font(.headline)
-                Spacer()
-                Text("Avg 118")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            BarChart(
-                values: sample.dailyTIR.map { Double($0) },
+            WeeklyGlucoseTrendChart(
+                values: sample.glucoseValues,
                 labels: sample.dayLabels,
-                barColor: AppTheme.primary
+                targetLow: sample.targetLow,
+                targetHigh: sample.targetHigh
             )
-            .frame(height: 140)
-
-            Text("Bars show % time in range by day.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .frame(height: 350)
         }
         .padding(14)
         .background(AppTheme.card)
@@ -160,69 +103,98 @@ struct WeeklyGlucoseOverviewMockView: View {
     }
 }
 
-private struct CGMWeeklySample {
+private struct CGMSimpleWeeklySample {
     let timeInRangePercent: Int
-    let avgGlucose: Int
-    let gmi: Double
-    let variabilityPercent: Int
-    let lowsCount: Int
-    let highsCount: Int
-    let estimatedA1cText: String
-    let weekLabel: String
+    let targetTimeInRangePercent: Int
+    let targetLow: Double
+    let targetHigh: Double
     let dayLabels: [String]
-    let dailyTIR: [Int]
-    let dailyAvg: [Int]
+    let glucoseValues: [Double]
 }
 
-private struct BarChart: View {
+private struct WeeklyGlucoseTrendChart: View {
     let values: [Double]
     let labels: [String]
-    let barColor: Color
+    let targetLow: Double
+    let targetHigh: Double
+
+    private let minDisplayValue: Double = 50
+    private let maxDisplayValue: Double = 220
 
     var body: some View {
         GeometryReader { geo in
-            let maxV = max(values.max() ?? 1, 1)
-            let barWidth = max(10, (geo.size.width - CGFloat(values.count - 1) * 10) / CGFloat(values.count))
-            HStack(alignment: .bottom, spacing: 10) {
-                ForEach(Array(values.enumerated()), id: \.offset) { idx, v in
-                    VStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(barColor.opacity(0.45))
-                            .frame(width: barWidth, height: max(8, geo.size.height * (v / maxV)))
+            let height = geo.size.height
+            let width = geo.size.width
+            let topInset: CGFloat = 18
+            let bottomInset: CGFloat = 34
+            let chartHeight = max(1, height - topInset - bottomInset)
+            let lowY = yPosition(for: targetLow, chartHeight: chartHeight, topInset: topInset)
+            let highY = yPosition(for: targetHigh, chartHeight: chartHeight, topInset: topInset)
 
-                        Text(labels.indices.contains(idx) ? labels[idx] : "")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.green.opacity(0.14))
+                    .frame(width: width, height: max(0, lowY - highY))
+                    .offset(y: highY)
+
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: highY))
+                    path.addLine(to: CGPoint(x: width, y: highY))
+                    path.move(to: CGPoint(x: 0, y: lowY))
+                    path.addLine(to: CGPoint(x: width, y: lowY))
+                }
+                .stroke(
+                    Color.green.opacity(0.45),
+                    style: StrokeStyle(lineWidth: 1, dash: [5, 5])
+                )
+
+                Path { path in
+                    guard !values.isEmpty else { return }
+                    path.move(to: CGPoint(
+                        x: xPosition(for: 0, width: width),
+                        y: yPosition(for: values[0], chartHeight: chartHeight, topInset: topInset)
+                    ))
+                    for idx in values.indices.dropFirst() {
+                        path.addLine(to: CGPoint(
+                            x: xPosition(for: idx, width: width),
+                            y: yPosition(for: values[idx], chartHeight: chartHeight, topInset: topInset)
+                        ))
                     }
-                    .frame(maxHeight: .infinity, alignment: .bottom)
+                }
+                .stroke(
+                    AppTheme.primary,
+                    style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+                )
+
+                ForEach(values.indices, id: \.self) { idx in
+                    Circle()
+                        .fill(AppTheme.primary)
+                        .frame(width: 8, height: 8)
+                        .position(
+                            x: xPosition(for: idx, width: width),
+                            y: yPosition(for: values[idx], chartHeight: chartHeight, topInset: topInset)
+                        )
+                }
+
+                ForEach(labels.indices, id: \.self) { idx in
+                    Text(labels[idx])
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .position(x: xPosition(for: idx, width: width), y: height - 9)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
-        .padding(12)
-        .padding(.bottom, 14)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
-}
 
-private struct MetricPill: View {
-    let systemImage: String
-    let text: String
-    let color: Color
+    private func xPosition(for index: Int, width: CGFloat) -> CGFloat {
+        guard values.count > 1 else { return width / 2 }
+        return CGFloat(index) * (width / CGFloat(values.count - 1))
+    }
 
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(color)
-            Text(text)
-                .font(.caption).bold()
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 10)
-        .background(Color(uiColor: .tertiarySystemFill))
-        .clipShape(Capsule())
+    private func yPosition(for glucose: Double, chartHeight: CGFloat, topInset: CGFloat) -> CGFloat {
+        let clamped = min(max(glucose, minDisplayValue), maxDisplayValue)
+        let ratio = (clamped - minDisplayValue) / (maxDisplayValue - minDisplayValue)
+        return topInset + (1 - CGFloat(ratio)) * chartHeight
     }
 }
 

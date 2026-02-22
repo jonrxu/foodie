@@ -12,55 +12,12 @@ struct MockupsView: View {
         List {
             Section {
                 NavigationLink {
-                    PatientOnboardingStepOneView()
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("About you (Step 1)")
-                            .font(.headline)
-                        Text("Diet, low sodium, dislikes, activity level")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 6)
-                }
-
-                NavigationLink {
-                    MealPreferenceMockView()
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Meal preferences (Step 2)")
-                            .font(.headline)
-                        Text("Select focus areas + meal types")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 6)
-                }
-
-                NavigationLink {
-                    ShoppingCartMockView()
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Shopping cart (Step 3)")
-                            .font(.headline)
-                        Text("Tagged items + order button")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 6)
-                }
-            } header: {
-                Text("Mockup 1 • Onboarding → Cart")
-            }
-
-            Section {
-                NavigationLink {
                     FoodLoggingMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Log a meal (Step 1)")
+                        Text("1. Log a meal")
                             .font(.headline)
-                        Text("Voice, photo, text, or barcode")
+                        Text("Voice or photo in one tap")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -71,39 +28,9 @@ struct MockupsView: View {
                     PlateFeedbackMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Plate feedback (Step 2)")
+                        Text("2. Plate feedback")
                             .font(.headline)
-                        Text("Balanced plate ring + simple tips")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 6)
-                }
-
-                NavigationLink {
-                    GroceryCartMockView()
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Grocery cart (Step 3)")
-                            .font(.headline)
-                        Text("Generated cart + checkout")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 6)
-                }
-            } header: {
-                Text("Mockup 2 • Food logging")
-            }
-
-            Section {
-                NavigationLink {
-                    NighttimeGlucoseMockView()
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CGM • Nighttime summary (Step 2)")
-                            .font(.headline)
-                        Text("Nights above range + avg nighttime glucose (last 7 days)")
+                        Text("Balanced plate model in plain language")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -114,9 +41,9 @@ struct MockupsView: View {
                     WeeklyGlucoseOverviewMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("CGM • Weekly overview (Slide 2)")
+                        Text("3. Weekly CGM overview")
                             .font(.headline)
-                        Text("Time in range + key stats + weekly pattern")
+                        Text("Single weekly trend with target range")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -124,19 +51,21 @@ struct MockupsView: View {
                 }
 
                 NavigationLink {
-                    FoodRecommendationsMockView()
+                    ShoppingCartMockView()
                 } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("CGM • Food recommendations (Slide 3)")
+                        Text("4. Order groceries")
                             .font(.headline)
-                        Text("Suggested foods + “Add to cart” actions")
+                        Text("Large-text cart and one-tap checkout")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 6)
                 }
             } header: {
-                Text("CGM demo flow (slides 2–3)")
+                Text("Survey Prototype (4 screens)")
+            } footer: {
+                Text("Show these in order for quick concept feedback.")
             }
         }
         .navigationTitle("Mockups")
