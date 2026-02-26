@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ShoppingCartMockView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var showInstacartCheckout = false
 
     private let items: [CartItem] = [
         CartItem(name: "Bananas", detail: "4 each", tag: "Produce", color: .green, icon: "🍌"),
@@ -25,10 +26,17 @@ struct ShoppingCartMockView: View {
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 0) {
-                    header
-                    Spacer(minLength: 16)
-                    cartCard
-                    Spacer(minLength: 20)
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        Spacer(minLength: 16)
+                        cartCard
+                        Spacer(minLength: 20)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismiss()
+                    }
+
                     orderButton
                 }
                 .padding(.horizontal, 20)
@@ -40,16 +48,20 @@ struct ShoppingCartMockView: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
+        .navigationDestination(isPresented: $showInstacartCheckout) {
+            InstacartCheckoutMockView()
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Your shopping cart")
-                .font(.system(size: 33, weight: .bold, design: .rounded))
+                .font(.system(size: 36, weight: .bold, design: .rounded))
 
-            Text("Ready to order in one tap")
-                .font(.headline.weight(.semibold))
+            Text("Here is your personal shopping list based on your food logs and CGM data this week")
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -57,12 +69,17 @@ struct ShoppingCartMockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Items")
-                    .font(.headline)
+                    .font(.title3.weight(.bold))
                 Spacer()
-                Text("\(items.count) total")
-                    .font(.subheadline.weight(.semibold))
+                Label("Customize", systemImage: "square.and.pencil")
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(AppTheme.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.primary.opacity(0.12))
+                    .clipShape(Capsule())
             }
+            .padding(.bottom, 4)
             .padding(.bottom, 6)
 
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -86,12 +103,12 @@ struct ShoppingCartMockView: View {
         HStack {
             Spacer()
             Button {
-                dismiss()
+                showInstacartCheckout = true
             } label: {
                 Text("Order on Instacart")
-                    .font(.headline.weight(.semibold))
+                    .font(.title3.weight(.semibold))
                     .padding(.horizontal, 26)
-                    .padding(.vertical, 11)
+                    .padding(.vertical, 12)
                     .foregroundStyle(.white)
                     .background(AppTheme.primary)
                     .clipShape(Capsule())
@@ -142,16 +159,16 @@ private struct CartRow: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .fill(item.color.opacity(0.16))
-                    .frame(width: 36, height: 36)
+                    .frame(width: 42, height: 42)
                 Text(item.icon)
-                    .font(.system(size: 18))
+                    .font(.system(size: 22))
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                    .font(.headline.weight(.semibold))
+                    .font(.title3.weight(.semibold))
                 Text(item.detail)
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.secondary)
             }
 
@@ -159,7 +176,7 @@ private struct CartRow: View {
 
             TagPill(text: item.tag, color: item.color)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
     }
 }
 
@@ -169,10 +186,10 @@ private struct TagPill: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .font(.subheadline.weight(.semibold))
             .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(color.opacity(0.13))
             .clipShape(Capsule())
     }

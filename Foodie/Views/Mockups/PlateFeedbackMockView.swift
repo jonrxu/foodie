@@ -2,13 +2,14 @@
 //  PlateFeedbackMockView.swift
 //  Foodie
 //
-//  Sleek survey mock: smooth post-meal glucose trend + simple coach guidance.
+//  Mockup 2 split into two screens: glucose prediction, then AI coach advice.
 //
 
 import SwiftUI
 
 struct PlateFeedbackMockView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var showCoachFeedback = false
 
     private let impact = MealGlucoseImpact(
         withMeal: [
@@ -38,19 +39,27 @@ struct PlateFeedbackMockView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                pageBackground
+                MockPageBackground()
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 0) {
-                    header
-                    Spacer(minLength: 14)
-                    trendCard
-                    Spacer(minLength: 26)
-                    coachBubble
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        Spacer(minLength: 10)
+                        loggedMealPhotoCard
+                        Spacer(minLength: 10)
+                        trendCard
+                        Spacer(minLength: 14)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismiss()
+                    }
+
+                    nextButton
                     Spacer(minLength: 0)
                 }
-                .padding(.leading, 18)
-                .padding(.trailing, 18)
+                .padding(.horizontal, 18)
                 .padding(.top, 62)
                 .padding(.bottom, 24)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
@@ -59,20 +68,46 @@ struct PlateFeedbackMockView: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
-        .onTapGesture {
-            dismiss()
+        .navigationDestination(isPresented: $showCoachFeedback) {
+            PlateCoachFeedbackMockView()
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Analyzing your meal")
+            Text("Feedback on your meal")
                 .font(.system(size: 33, weight: .bold, design: .rounded))
 
             Text("Quick look at your next 2 hours")
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var loggedMealPhotoCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image("chickenandfries")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 214)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topTrailing) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color.white.opacity(0.92))
+                            .frame(width: 30, height: 30)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AppTheme.primary)
+                    }
+                    .padding(8)
+                }
+
+            Text("Chicken and fries")
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var trendCard: some View {
@@ -90,8 +125,8 @@ struct PlateFeedbackMockView: View {
                 withMeal: impact.withMeal,
                 withoutMeal: impact.withoutMeal
             )
-            .frame(height: 214)
-            .padding(.top, 8)
+            .frame(height: 176)
+            .padding(.top, 4)
 
             HStack(spacing: 16) {
                 TrendLegendLine(color: .blue, style: .solid, text: "With this meal")
@@ -108,38 +143,146 @@ struct PlateFeedbackMockView: View {
         )
     }
 
-    private var coachBubble: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.primary.opacity(0.2))
-                    .frame(width: 34, height: 34)
-                Image(systemName: "sparkles")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(AppTheme.primary)
+    private var nextButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                showCoachFeedback = true
+            } label: {
+                Text("See AI coach feedback")
+                    .font(.headline.weight(.semibold))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(.white)
+                    .background(AppTheme.primary)
+                    .clipShape(Capsule())
             }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("AI Coach")
-                    .font(.caption).bold()
-                    .foregroundStyle(.secondary)
-                Text("Nice balance overall. Expect a short rise, then cooldown. Next time, swap fries for a side salad.")
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(15)
-            .background(.white.opacity(0.96))
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.blue.opacity(0.14), lineWidth: 1)
-            )
+            Spacer()
         }
-        .padding(.leading, 2)
+    }
+}
+
+struct PlateCoachFeedbackMockView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                MockPageBackground()
+                    .ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        Spacer(minLength: 12)
+                        coachCard
+                        Spacer(minLength: 14)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismiss()
+                    }
+
+                    addToCartButton
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 62)
+                .padding(.bottom, 24)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+            }
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
     }
 
-    private var pageBackground: some View {
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("AI coach feedback")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+
+            Text("Simple tips for your next meal")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var coachCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.primary.opacity(0.2))
+                        .frame(width: 30, height: 30)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppTheme.primary)
+                }
+
+                Text("AI Coach")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+
+            Text("This meal is nicely balanced. You may see a short rise in your blood sugar, followed by a steady decrease.")
+                .font(.title3)
+                .foregroundStyle(.primary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Try this next time: swap fries for a side salad.")
+                .font(.title3)
+                .foregroundStyle(.primary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+
+            HStack {
+                Spacer(minLength: 0)
+                Image("chickenandsalad")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 242)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 2)
+        }
+        .padding(20)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.blue.opacity(0.14), lineWidth: 1)
+        )
+    }
+
+    private var addToCartButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Text("Add ingredients to my cart")
+                    .font(.headline.weight(.semibold))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(.white)
+                    .background(AppTheme.primary)
+                    .clipShape(Capsule())
+            }
+            Spacer()
+        }
+    }
+}
+
+private struct MockPageBackground: View {
+    var body: some View {
         ZStack {
             Color.white
 

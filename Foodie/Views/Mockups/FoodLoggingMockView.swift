@@ -50,13 +50,17 @@ struct FoodLoggingMockView: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            dismiss()
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Log your meal")
+            Text("Log your food")
                 .font(.system(size: 33, weight: .bold, design: .rounded))
-            Text("Choose one simple way to add food")
+            Text("Chose one simple way to add a meal, snack, or drink")
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }

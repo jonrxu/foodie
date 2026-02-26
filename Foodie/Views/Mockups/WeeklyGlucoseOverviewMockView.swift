@@ -44,11 +44,20 @@ struct WeeklyGlucoseOverviewMockView: View {
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 0) {
-                    header
-                    Spacer(minLength: 16)
-                    summaryCard
-                    Spacer(minLength: 14)
-                    trendCard
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        Spacer(minLength: 16)
+                        summaryCard
+                        Spacer(minLength: 14)
+                        trendCard
+                        Spacer(minLength: 18)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismiss()
+                    }
+
+                    planMealsButton
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 20)
@@ -60,9 +69,6 @@ struct WeeklyGlucoseOverviewMockView: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
-        .onTapGesture {
-            dismiss()
-        }
     }
 
     private var header: some View {
@@ -150,6 +156,24 @@ struct WeeklyGlucoseOverviewMockView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color.blue.opacity(0.12), lineWidth: 1)
         )
+    }
+
+    private var planMealsButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Text("Plan my meals for next week")
+                    .font(.headline.weight(.semibold))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(.white)
+                    .background(AppTheme.primary)
+                    .clipShape(Capsule())
+            }
+            Spacer()
+        }
     }
 
     private var pageBackground: some View {
