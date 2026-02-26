@@ -103,6 +103,14 @@ struct InstacartCheckoutMockView: View {
             .background(Color.white)
             .ignoresSafeArea(edges: .bottom)
         }
+        .overlay(alignment: .bottom) {
+            Text("Fresh Funds voucher applied \(voucherText)")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.green.opacity(0.95))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .offset(y: 16)
+                .allowsHitTesting(false)
+        }
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
@@ -169,10 +177,6 @@ struct InstacartCheckoutMockView: View {
                     .font(.system(size: 13, weight: .semibold))
             }
             .foregroundStyle(Color.green.opacity(0.95))
-
-            Text("Fresh Funds voucher applied \(voucherText)")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.green.opacity(0.95))
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
@@ -213,8 +217,8 @@ struct InstacartCheckoutMockView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 18)
             .padding(.top, 12)
-            .padding(.bottom, 10)
-            .background(Color.white)
+                .padding(.bottom, 10)
+                .background(Color.white)
         }
     }
 }
