@@ -10,14 +10,14 @@ import SwiftUI
 struct InstacartCheckoutMockView: View {
     @Environment(\.dismiss) private var dismiss
 
-    private let subtotalText = "$30.30"
-    private let voucherText = "-$30.30"
-    private let totalDueText = "$0.00"
+    private let subtotalText = "$42.10"
+    private let voucherText = "-$40.00"
+    private let totalDueText = "$2.10"
 
     private let items: [InstacartLineItem] = [
         InstacartLineItem(
             name: "Banana (About 0.42 lb each)",
-            price: "$1.15",
+            price: "$1.49",
             oldPrice: nil,
             quantity: "4 ct",
             icon: "🍌",
@@ -25,7 +25,7 @@ struct InstacartCheckoutMockView: View {
         ),
         InstacartLineItem(
             name: "Honeycrisp Apple (About 0.58 lb each)",
-            price: "$7.86",
+            price: "$8.86",
             oldPrice: "$9.26",
             quantity: "4 ct",
             icon: "🍎",
@@ -33,7 +33,7 @@ struct InstacartCheckoutMockView: View {
         ),
         InstacartLineItem(
             name: "Store Brand Eggs, Large, Grade A (12 ct)",
-            price: "$1.99",
+            price: "$3.99",
             oldPrice: nil,
             quantity: "1 ct",
             icon: "🥚",
@@ -41,7 +41,7 @@ struct InstacartCheckoutMockView: View {
         ),
         InstacartLineItem(
             name: "Arnold Whole Grains, Healthy Bread (24 oz)",
-            price: "$5.99",
+            price: "$6.99",
             oldPrice: nil,
             quantity: "1 ct",
             icon: "🍞",
@@ -49,15 +49,15 @@ struct InstacartCheckoutMockView: View {
         ),
         InstacartLineItem(
             name: "Perdue Fresh Boneless Skinless Chicken Breasts",
-            price: "$4.94",
-            oldPrice: "$8.98",
+            price: "$10.14",
+            oldPrice: "$11.98",
             quantity: "1.5 lbs",
             icon: "🍗",
             usesTrash: true
         ),
         InstacartLineItem(
             name: "Store Brand Greek Nonfat Plain Yogurt (32 oz)",
-            price: "$4.59",
+            price: "$5.59",
             oldPrice: nil,
             quantity: "1 ct",
             icon: "🥛",
@@ -65,7 +65,7 @@ struct InstacartCheckoutMockView: View {
         ),
         InstacartLineItem(
             name: "Broccoli Crown (About 0.82 lb each)",
-            price: "$3.78",
+            price: "$5.04",
             oldPrice: nil,
             quantity: "2 ct",
             icon: "🥦",

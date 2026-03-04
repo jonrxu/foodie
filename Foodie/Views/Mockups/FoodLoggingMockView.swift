@@ -11,7 +11,7 @@ struct FoodLoggingMockView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let modes: [LoggingMode] = [
-        LoggingMode(title: "Scan Photo", systemImage: "camera.fill", tint: Color(red: 0.14, green: 0.53, blue: 0.96)),
+        LoggingMode(title: "Take Photo", systemImage: "camera.fill", tint: Color(red: 0.14, green: 0.53, blue: 0.96)),
         LoggingMode(title: "Voice Log", systemImage: "mic.fill", tint: Color(red: 0.05, green: 0.66, blue: 0.62)),
         LoggingMode(title: "Barcode Scan", systemImage: "barcode.viewfinder", tint: Color(red: 0.95, green: 0.61, blue: 0.16)),
         LoggingMode(title: "Text Log", systemImage: "text.bubble.fill", tint: Color(red: 0.91, green: 0.37, blue: 0.44))

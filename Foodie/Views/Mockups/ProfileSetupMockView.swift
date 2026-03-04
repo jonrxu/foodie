@@ -24,17 +24,11 @@ struct ProfileSetupMockView: View {
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Set up your profile")
-                            .font(.system(size: 33, weight: .bold, design: .rounded))
-                        Text("Step 1 of 3")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        dismiss()
-                    }
+                    topHeader
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            dismiss()
+                        }
 
                     Spacer(minLength: 14)
 
@@ -44,7 +38,7 @@ struct ProfileSetupMockView: View {
                             dismiss()
                         }
 
-                    Spacer(minLength: 18)
+                    Spacer(minLength: 16)
 
                     HStack {
                         Spacer()
@@ -54,7 +48,7 @@ struct ProfileSetupMockView: View {
                             Text("Continue")
                                 .font(.headline.weight(.semibold))
                                 .padding(.horizontal, 24)
-                                .padding(.vertical, 13)
+                                .padding(.vertical, 12)
                                 .foregroundStyle(.white)
                                 .background(AppTheme.primary)
                                 .clipShape(Capsule())
@@ -73,12 +67,18 @@ struct ProfileSetupMockView: View {
         .navigationBarBackButtonHidden(true)
     }
 
-    private var profileCard: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("Tell us a little about your food habits.")
-                .font(.body)
+    private var topHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Set up your profile")
+                .font(.system(size: 33, weight: .bold, design: .rounded))
+            Text("Step 1 of 3 • Tell us about your food habits")
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
+        }
+    }
 
+    private var profileCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Diet preferences")
                     .font(.headline.weight(.semibold))
@@ -99,16 +99,24 @@ struct ProfileSetupMockView: View {
                     Button {
                         selectedActivity = option
                     } label: {
-                        HStack(spacing: 12) {
+                        HStack(alignment: .top, spacing: 12) {
                             Image(systemName: selectedActivity == option ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(selectedActivity == option ? AppTheme.primary : .secondary)
-                            Text(option.title)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
+                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(option.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Text(option.subtitle)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                             Spacer()
                         }
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 9)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(selectedActivity == option ? AppTheme.primary.opacity(0.12) : Color(uiColor: .tertiarySystemFill))
@@ -118,7 +126,7 @@ struct ProfileSetupMockView: View {
                 }
             }
         }
-        .padding(18)
+        .padding(16)
         .background(.white.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
@@ -196,10 +204,19 @@ private enum ActivityPreset: CaseIterable {
 
     var title: String {
         switch self {
-        case .low: return "Not very active"
-        case .light: return "Lightly active"
+        case .low: return "Sedentary/Not Very Active"
+        case .light: return "Lightly Active"
         case .active: return "Active"
-        case .veryActive: return "Very active"
+        case .veryActive: return "Very Active"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .low: return "Mostly sitting during the day"
+        case .light: return "On your feet for part of the day"
+        case .active: return "Regular movement most of the day"
+        case .veryActive: return "Heavy physical activity most of the day"
         }
     }
 }
