@@ -10,6 +10,12 @@ import SwiftUI
 struct PlateFeedbackMockView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showCoachFeedback = false
+    @State private var showCart = false
+    let onAddIngredientsToCart: (() -> Void)?
+
+    init(onAddIngredientsToCart: (() -> Void)? = nil) {
+        self.onAddIngredientsToCart = onAddIngredientsToCart
+    }
 
     private let impact = MealGlucoseImpact(
         withMeal: [
@@ -69,7 +75,18 @@ struct PlateFeedbackMockView: View {
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
         .navigationDestination(isPresented: $showCoachFeedback) {
-            PlateCoachFeedbackMockView()
+            PlateCoachFeedbackMockView(
+                onAddIngredientsToCart: {
+                    if let onAddIngredientsToCart {
+                        onAddIngredientsToCart()
+                    } else {
+                        showCart = true
+                    }
+                }
+            )
+        }
+        .navigationDestination(isPresented: $showCart) {
+            ShoppingCartMockView()
         }
     }
 
@@ -164,6 +181,8 @@ struct PlateFeedbackMockView: View {
 
 struct PlateCoachFeedbackMockView: View {
     @Environment(\.dismiss) private var dismiss
+    let onAddIngredientsToCart: (() -> Void)?
+    @State private var isAddingToCart = false
 
     var body: some View {
         GeometryReader { geo in
@@ -266,16 +285,38 @@ struct PlateCoachFeedbackMockView: View {
         HStack {
             Spacer()
             Button {
-                dismiss()
+                if isAddingToCart { return }
+                isAddingToCart = true
+
+                // Demo affordance: brief loading before handing off to cart.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                    if let onAddIngredientsToCart {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            onAddIngredientsToCart()
+                        }
+                    } else {
+                        dismiss()
+                    }
+                    isAddingToCart = false
+                }
             } label: {
-                Text("Add ingredients to my cart")
-                    .font(.headline.weight(.semibold))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 11)
-                    .foregroundStyle(.white)
-                    .background(AppTheme.primary)
-                    .clipShape(Capsule())
+                HStack(spacing: 8) {
+                    if isAddingToCart {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                    }
+                    Text(isAddingToCart ? "Adding..." : "Add ingredients to my cart")
+                        .font(.headline.weight(.semibold))
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 11)
+                .foregroundStyle(.white)
+                .background(AppTheme.primary)
+                .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
+            .disabled(isAddingToCart)
             Spacer()
         }
     }

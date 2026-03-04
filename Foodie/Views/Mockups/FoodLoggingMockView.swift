@@ -7,15 +7,30 @@
 
 import SwiftUI
 
+enum FoodLoggingMode: Hashable {
+    case takePhoto
+    case voiceLog
+    case barcodeScan
+    case textLog
+}
+
 struct FoodLoggingMockView: View {
     @Environment(\.dismiss) private var dismiss
 
+    let onModeSelected: ((FoodLoggingMode) -> Void)?
+    let allowTapToDismiss: Bool
+
     private let modes: [LoggingMode] = [
-        LoggingMode(title: "Take Photo", systemImage: "camera.fill", tint: Color(red: 0.14, green: 0.53, blue: 0.96)),
-        LoggingMode(title: "Voice Log", systemImage: "mic.fill", tint: Color(red: 0.05, green: 0.66, blue: 0.62)),
-        LoggingMode(title: "Barcode Scan", systemImage: "barcode.viewfinder", tint: Color(red: 0.95, green: 0.61, blue: 0.16)),
-        LoggingMode(title: "Text Log", systemImage: "text.bubble.fill", tint: Color(red: 0.91, green: 0.37, blue: 0.44))
+        LoggingMode(mode: .takePhoto, title: "Take Photo", systemImage: "camera.fill", tint: Color(red: 0.14, green: 0.53, blue: 0.96)),
+        LoggingMode(mode: .voiceLog, title: "Voice Log", systemImage: "mic.fill", tint: Color(red: 0.05, green: 0.66, blue: 0.62)),
+        LoggingMode(mode: .barcodeScan, title: "Barcode Scan", systemImage: "barcode.viewfinder", tint: Color(red: 0.95, green: 0.61, blue: 0.16)),
+        LoggingMode(mode: .textLog, title: "Text Log", systemImage: "text.bubble.fill", tint: Color(red: 0.91, green: 0.37, blue: 0.44))
     ]
+
+    init(onModeSelected: ((FoodLoggingMode) -> Void)? = nil, allowTapToDismiss: Bool = true) {
+        self.onModeSelected = onModeSelected
+        self.allowTapToDismiss = allowTapToDismiss
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,12 +43,14 @@ struct FoodLoggingMockView: View {
                 ],
                 spacing: 14
             ) {
-                ForEach(modes, id: \.title) { mode in
+                ForEach(modes, id: \.mode) { mode in
                     LoggingModeCard(
                         title: mode.title,
                         systemImage: mode.systemImage,
                         tint: mode.tint,
-                        action: dismissCurrentScreen
+                        action: {
+                            handleModeSelection(mode.mode)
+                        }
                     )
                 }
             }
@@ -52,7 +69,9 @@ struct FoodLoggingMockView: View {
         .navigationBarBackButtonHidden(true)
         .contentShape(Rectangle())
         .onTapGesture {
-            dismiss()
+            if allowTapToDismiss {
+                dismiss()
+            }
         }
     }
 
@@ -89,12 +108,17 @@ struct FoodLoggingMockView: View {
         .ignoresSafeArea()
     }
 
-    private func dismissCurrentScreen() {
-        dismiss()
+    private func handleModeSelection(_ mode: FoodLoggingMode) {
+        if let onModeSelected {
+            onModeSelected(mode)
+        } else {
+            dismiss()
+        }
     }
 }
 
 private struct LoggingMode {
+    let mode: FoodLoggingMode
     let title: String
     let systemImage: String
     let tint: Color

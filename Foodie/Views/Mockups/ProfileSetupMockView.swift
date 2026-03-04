@@ -10,12 +10,20 @@ import SwiftUI
 struct ProfileSetupMockView: View {
     @Environment(\.dismiss) private var dismiss
 
+    let onContinue: (() -> Void)?
+    let allowTapToDismiss: Bool
+
     @State private var selectedDiets: Set<String> = ["No red meat"]
     @State private var selectedDietNeeds: Set<String> = ["Low sodium"]
     @State private var selectedActivity: ActivityPreset = .light
 
     private let dietOptions = ["Vegan", "Vegetarian", "No red meat", "No pork"]
     private let dietNeedOptions = ["Low sodium", "Kidney disease", "Blood thinners", "High cholesterol"]
+
+    init(onContinue: (() -> Void)? = nil, allowTapToDismiss: Bool = true) {
+        self.onContinue = onContinue
+        self.allowTapToDismiss = allowTapToDismiss
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -27,7 +35,7 @@ struct ProfileSetupMockView: View {
                     topHeader
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            dismiss()
+                            handleTapDismiss()
                         }
 
                     Spacer(minLength: 14)
@@ -35,7 +43,7 @@ struct ProfileSetupMockView: View {
                     profileCard
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            dismiss()
+                            handleTapDismiss()
                         }
 
                     Spacer(minLength: 16)
@@ -43,7 +51,7 @@ struct ProfileSetupMockView: View {
                     HStack {
                         Spacer()
                         Button {
-                            dismiss()
+                            handleContinue()
                         } label: {
                             Text("Continue")
                                 .font(.headline.weight(.semibold))
@@ -169,6 +177,19 @@ struct ProfileSetupMockView: View {
         } else {
             selectedDietNeeds.insert(option)
         }
+    }
+
+    private func handleContinue() {
+        if let onContinue {
+            onContinue()
+        } else {
+            dismiss()
+        }
+    }
+
+    private func handleTapDismiss() {
+        guard allowTapToDismiss else { return }
+        dismiss()
     }
 
     private var mockupBackground: some View {

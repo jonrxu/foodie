@@ -10,6 +10,12 @@ import SwiftUI
 struct WeeklyGlucoseOverviewMockView: View {
     @Environment(\.dismiss) private var dismiss
 
+    let onPlanMealsForNextWeek: (() -> Void)?
+
+    init(onPlanMealsForNextWeek: (() -> Void)? = nil) {
+        self.onPlanMealsForNextWeek = onPlanMealsForNextWeek
+    }
+
     private let sample = CGMSimpleWeeklySample(
         timeInRangePercent: 82,
         targetTimeInRangePercent: 85,
@@ -162,7 +168,11 @@ struct WeeklyGlucoseOverviewMockView: View {
         HStack {
             Spacer()
             Button {
-                dismiss()
+                if let onPlanMealsForNextWeek {
+                    onPlanMealsForNextWeek()
+                } else {
+                    dismiss()
+                }
             } label: {
                 Text("Plan my meals for next week")
                     .font(.headline.weight(.semibold))
