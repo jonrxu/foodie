@@ -125,10 +125,6 @@ struct FoodRecommendationsMockView: View {
         }
         .padding(.top, 4)
     }
-
-    private func tap(_ name: String) {
-        dismiss()
-    }
 }
 
 private struct CGMFoodRecommendationMock: Identifiable {
