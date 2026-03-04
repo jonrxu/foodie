@@ -18,6 +18,7 @@ struct SimpleFoodLogView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     header
+                    mockupsEntryPoint
                     
                     if logs.isEmpty {
                         emptyState
@@ -61,6 +62,47 @@ struct SimpleFoodLogView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var mockupsEntryPoint: some View {
+        NavigationLink {
+            MockupsView()
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(AppTheme.primary.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AppTheme.primary)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Mockups")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Step 3: Plate feedback (macros + advice)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .background(AppTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color(uiColor: .separator).opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open mockups")
     }
     
     private var emptyState: some View {
@@ -468,4 +510,3 @@ private struct LogCard: View {
         SimpleFoodLogView()
     }
 }
-
