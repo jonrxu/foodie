@@ -9,10 +9,17 @@ import Foundation
 final class ApiKeyStore {
     static let shared = ApiKeyStore()
 
-    private let userDefaultsKey = "OPENAI_API_KEY"
+    private let legacyUserDefaultsKey = "OPENAI_API_KEY"
+    private let keychainAccount = "OPENAI_API_KEY"
 
     func getApiKey() -> String? {
-        if let savedKey = UserDefaults.standard.string(forKey: userDefaultsKey), !savedKey.isEmpty {
+        if let savedKey = KeychainStore.shared.read(account: keychainAccount), !savedKey.isEmpty {
+            return savedKey
+        }
+
+        if let savedKey = UserDefaults.standard.string(forKey: legacyUserDefaultsKey), !savedKey.isEmpty {
+            _ = KeychainStore.shared.write(savedKey, account: keychainAccount)
+            UserDefaults.standard.removeObject(forKey: legacyUserDefaultsKey)
             return savedKey
         }
 
@@ -35,8 +42,18 @@ final class ApiKeyStore {
     }
 
     func saveApiKey(_ key: String) {
-        UserDefaults.standard.set(key, forKey: userDefaultsKey)
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            clearApiKey()
+            return
+        }
+        _ = KeychainStore.shared.write(trimmed, account: keychainAccount)
+        UserDefaults.standard.removeObject(forKey: legacyUserDefaultsKey)
+    }
+
+    func clearApiKey() {
+        _ = KeychainStore.shared.delete(account: keychainAccount)
+        UserDefaults.standard.removeObject(forKey: legacyUserDefaultsKey)
     }
 }
-
 

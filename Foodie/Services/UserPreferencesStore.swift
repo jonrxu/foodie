@@ -84,19 +84,32 @@ final class UserPreferencesStore {
     }
 
     func loadInstacartApiKey() -> String? {
-        UserDefaults.standard.string(forKey: instacartKey)
+        if let savedKey = KeychainStore.shared.read(account: instacartKey), savedKey.isEmpty == false {
+            return savedKey
+        }
+
+        if let legacyKey = UserDefaults.standard.string(forKey: instacartKey), legacyKey.isEmpty == false {
+            _ = KeychainStore.shared.write(legacyKey, account: instacartKey)
+            UserDefaults.standard.removeObject(forKey: instacartKey)
+            return legacyKey
+        }
+
+        return nil
     }
 
     func saveInstacartApiKey(_ key: String?) {
         let trimmed = key?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if trimmed.isEmpty {
+            _ = KeychainStore.shared.delete(account: instacartKey)
             UserDefaults.standard.removeObject(forKey: instacartKey)
         } else {
-            UserDefaults.standard.set(trimmed, forKey: instacartKey)
+            _ = KeychainStore.shared.write(trimmed, account: instacartKey)
+            UserDefaults.standard.removeObject(forKey: instacartKey)
         }
     }
 
     func clearInstacartApiKey() {
+        _ = KeychainStore.shared.delete(account: instacartKey)
         UserDefaults.standard.removeObject(forKey: instacartKey)
     }
 }

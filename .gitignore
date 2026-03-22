@@ -95,3 +95,5 @@ Foodie/AppConfig.swift
 # macOS
 .DS_Store
 
+# Local research / writing
+Thesis/
