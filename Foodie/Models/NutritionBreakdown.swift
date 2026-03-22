@@ -6,8 +6,8 @@
 
 import Foundation
 
-struct NutritionBreakdown: Codable, Equatable {
-    struct Totals: Codable, Equatable {
+struct NutritionBreakdown: Codable, Equatable, Hashable {
+    struct Totals: Codable, Equatable, Hashable {
         var calories: Double?
         var proteinGrams: Double?
         var carbohydrateGrams: Double?
@@ -19,13 +19,13 @@ struct NutritionBreakdown: Codable, Equatable {
         var unsaturatedFatGrams: Double?
     }
 
-    struct Portion: Codable, Equatable {
+    struct Portion: Codable, Equatable, Hashable {
         var unit: String?
         var quantity: Double?
         var text: String?
     }
 
-    struct Item: Codable, Equatable {
+    struct Item: Codable, Equatable, Hashable {
         var name: String
         var description: String?
         var portion: Portion?
@@ -34,7 +34,7 @@ struct NutritionBreakdown: Codable, Equatable {
         var tags: [String]?
     }
 
-    struct Confidence: Codable, Equatable {
+    struct Confidence: Codable, Equatable, Hashable {
         var overall: Double?
         var calories: Double?
         var protein: Double?
@@ -76,5 +76,4 @@ extension NutritionBreakdown.Totals {
         unsaturatedFatGrams = (unsaturatedFatGrams ?? 0) + (other.unsaturatedFatGrams ?? 0)
     }
 }
-
 

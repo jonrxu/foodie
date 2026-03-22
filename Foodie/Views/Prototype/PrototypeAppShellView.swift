@@ -309,6 +309,7 @@ private struct PrototypeHomeView: View {
     }
 
     @State private var path: [Destination] = []
+    @StateObject private var viewModel = PrototypeHomeViewModel()
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -330,6 +331,12 @@ private struct PrototypeHomeView: View {
                                     .font(.headline.weight(.semibold))
                                     .foregroundStyle(.secondary)
                             }
+
+                            PrototypeSummaryCard(
+                                mealsLoggedThisWeek: viewModel.mealsLoggedThisWeek,
+                                latestCartItemCount: viewModel.latestCartItemCount,
+                                cgmStatusLabel: viewModel.cgmStatusLabel
+                            )
 
                             Button {
                                 path.append(.groceries)
@@ -412,6 +419,9 @@ private struct PrototypeHomeView: View {
             .toolbar(.hidden, for: .navigationBar)
             .mockupsFullscreen()
             .navigationBarBackButtonHidden(true)
+            .task {
+                await viewModel.reload()
+            }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
                 case .selectMeals:
@@ -437,6 +447,52 @@ private struct PrototypeHomeView: View {
                 }
             }
         }
+    }
+}
+
+private struct PrototypeSummaryCard: View {
+    let mealsLoggedThisWeek: Int
+    let latestCartItemCount: Int
+    let cgmStatusLabel: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            summaryPill(
+                title: "Meals",
+                value: "\(mealsLoggedThisWeek) this week",
+                tint: .blue
+            )
+            summaryPill(
+                title: "Cart",
+                value: latestCartItemCount > 0 ? "\(latestCartItemCount) items ready" : "No draft yet",
+                tint: .green
+            )
+            summaryPill(
+                title: "CGM",
+                value: cgmStatusLabel,
+                tint: .teal
+            )
+        }
+    }
+
+    private func summaryPill(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
     }
 }
 

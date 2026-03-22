@@ -6,14 +6,14 @@
 
 import Foundation
 
-struct FoodHealthAssessment: Codable {
+struct FoodHealthAssessment: Codable, Hashable {
     let score: Int
     let level: String
     let axes: Axes
     let tags: [String]
     let highlights: [String]
 
-    struct Axes: Codable {
+    struct Axes: Codable, Hashable {
         let nutrientDensity: Int
         let processing: Int
         let sugarLoad: Int
@@ -22,5 +22,4 @@ struct FoodHealthAssessment: Codable {
         let positives: Int
     }
 }
-
 
