@@ -10,20 +10,41 @@ import SwiftUI
 struct WeeklyGlucoseOverviewMockView: View {
     @Environment(\.dismiss) private var dismiss
 
+    private let summary: GlucoseSummary?
+    private let cgmStatusLabel: String?
+    private let errorMessage: String?
+    private let isSyncing: Bool
+    private let onSync: (() -> Void)?
     let onPlanMealsForNextWeek: (() -> Void)?
 
-    init(onPlanMealsForNextWeek: (() -> Void)? = nil) {
+    init(summary: GlucoseSummary? = nil,
+         cgmStatusLabel: String? = nil,
+         errorMessage: String? = nil,
+         isSyncing: Bool = false,
+         onSync: (() -> Void)? = nil,
+         onPlanMealsForNextWeek: (() -> Void)? = nil) {
+        self.summary = summary
+        self.cgmStatusLabel = cgmStatusLabel
+        self.errorMessage = errorMessage
+        self.isSyncing = isSyncing
+        self.onSync = onSync
         self.onPlanMealsForNextWeek = onPlanMealsForNextWeek
     }
 
-    private let sample = CGMSimpleWeeklySample(
-        timeInRangePercent: 82,
-        targetTimeInRangePercent: 85,
-        targetLow: 70,
-        targetHigh: 180,
-        dayLabels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        glucoseValues: [126, 160, 149, 176, 166, 154, 162]
-    )
+    private var sample: CGMSimpleWeeklySample {
+        if let summary {
+            return CGMSimpleWeeklySample(summary: summary)
+        }
+
+        return CGMSimpleWeeklySample(
+            timeInRangePercent: 82,
+            targetTimeInRangePercent: 85,
+            targetLow: 70,
+            targetHigh: 180,
+            dayLabels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            glucoseValues: [126, 160, 149, 176, 166, 154, 162]
+        )
+    }
 
     private var isOnGoal: Bool {
         sample.timeInRangePercent >= sample.targetTimeInRangePercent
@@ -85,6 +106,12 @@ struct WeeklyGlucoseOverviewMockView: View {
             Text("What your CGM says in the last 7 days")
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.secondary)
+
+            if let cgmStatusLabel, !cgmStatusLabel.isEmpty {
+                Text(cgmStatusLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.teal)
+            }
         }
     }
 
@@ -123,9 +150,35 @@ struct WeeklyGlucoseOverviewMockView: View {
             )
             .frame(height: 14)
 
-            Text("\(abs(goalDelta))% more to hit your weekly goal")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(statusColor)
+            if let errorMessage, !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.red)
+            } else {
+                Text("\(abs(goalDelta))% more to hit your weekly goal")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(statusColor)
+            }
+
+            if let onSync {
+                Button(action: onSync) {
+                    HStack(spacing: 8) {
+                        if isSyncing {
+                            ProgressView()
+                                .tint(AppTheme.primary)
+                        }
+                        Text(isSyncing ? "Syncing Dexcom..." : "Sync Dexcom")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color(uiColor: .tertiarySystemFill))
+                    .foregroundStyle(.primary)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isSyncing)
+            }
         }
         .padding(16)
         .background(.white.opacity(0.96))
@@ -142,7 +195,7 @@ struct WeeklyGlucoseOverviewMockView: View {
                 Text("Weekly trend")
                     .font(.title3).bold()
                 Spacer()
-                Text("CGM")
+                Text(summary == nil ? "Demo" : "Dexcom")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -218,6 +271,59 @@ private struct CGMSimpleWeeklySample {
     let targetHigh: Double
     let dayLabels: [String]
     let glucoseValues: [Double]
+
+    init(
+        timeInRangePercent: Int,
+        targetTimeInRangePercent: Int,
+        targetLow: Double,
+        targetHigh: Double,
+        dayLabels: [String],
+        glucoseValues: [Double]
+    ) {
+        self.timeInRangePercent = timeInRangePercent
+        self.targetTimeInRangePercent = targetTimeInRangePercent
+        self.targetLow = targetLow
+        self.targetHigh = targetHigh
+        self.dayLabels = dayLabels
+        self.glucoseValues = glucoseValues
+    }
+
+    init(summary: GlucoseSummary) {
+        let calendar = Calendar.current
+        let endDay = calendar.startOfDay(for: summary.endDate)
+        let startDay = calendar.date(byAdding: .day, value: -6, to: endDay) ?? endDay
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+
+        var labels: [String] = []
+        var values: [Double] = []
+
+        for offset in 0..<7 {
+            let day = calendar.date(byAdding: .day, value: offset, to: startDay) ?? startDay
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: day) ?? day
+            let dayReadings = summary.readings.filter { reading in
+                reading.timestamp >= day && reading.timestamp < nextDay
+            }
+
+            labels.append(formatter.string(from: day))
+            if dayReadings.isEmpty {
+                values.append(summary.averageMgdl ?? Double(summary.targetLowMgdl))
+            } else {
+                let average = dayReadings.map(\.valueMgdl).reduce(0, +)
+                values.append(Double(average) / Double(dayReadings.count))
+            }
+        }
+
+        self.init(
+            timeInRangePercent: summary.timeInRangePercent ?? 0,
+            targetTimeInRangePercent: 85,
+            targetLow: Double(summary.targetLowMgdl),
+            targetHigh: Double(summary.targetHighMgdl),
+            dayLabels: labels,
+            glucoseValues: values
+        )
+    }
 }
 
 private struct TimeInRangeBar: View {

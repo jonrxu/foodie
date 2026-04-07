@@ -25,6 +25,26 @@ final class BackendClient {
 
     struct DexcomAuthStartResponse: Codable {
         let authorizationURL: URL
+
+        enum CodingKeys: String, CodingKey {
+            case authorizationURL = "authorization_url"
+        }
+    }
+
+    struct DexcomConnectionStatusResponse: Codable {
+        let provider: String
+        let status: String
+        let connectedAt: Date?
+        let lastSyncAt: Date?
+        let errorMessage: String?
+
+        enum CodingKeys: String, CodingKey {
+            case provider
+            case status
+            case connectedAt = "connected_at"
+            case lastSyncAt = "last_sync_at"
+            case errorMessage = "error_message"
+        }
     }
 
     struct WeeklyGlucoseSummaryResponse: Codable {
@@ -43,10 +63,14 @@ final class BackendClient {
 
     private let environment: APIEnvironment
     private let session: URLSession
+    private let defaultUserID: String
 
-    init(environment: APIEnvironment = .stub, session: URLSession = .shared) {
+    init(environment: APIEnvironment = .current,
+         session: URLSession = .shared,
+         defaultUserID: String = AppConfig.defaultBackendUserID) {
         self.environment = environment
         self.session = session
+        self.defaultUserID = defaultUserID
     }
 
     func startDexcomAuthorization() async throws -> DexcomAuthStartResponse {
@@ -56,7 +80,68 @@ final class BackendClient {
                 authorizationURL: URL(string: "https://developer.dexcom.com/")!
             )
         case .remote(let baseURL):
-            return try await get(path: "/auth/dexcom/start", from: baseURL)
+            return try await post(path: "/dexcom/connect/start", body: EmptyBody(), to: baseURL)
+        }
+    }
+
+    func fetchDexcomConnectionStatus() async throws -> DexcomConnectionStatusResponse {
+        switch environment.mode {
+        case .stub:
+            return DexcomConnectionStatusResponse(
+                provider: "dexcom",
+                status: "connected",
+                connectedAt: Date(),
+                lastSyncAt: Date(),
+                errorMessage: nil
+            )
+        case .remote(let baseURL):
+            return try await get(path: "/dexcom/connect/status", from: baseURL)
+        }
+    }
+
+    func triggerDexcomSync() async throws -> DexcomConnectionStatusResponse {
+        switch environment.mode {
+        case .stub:
+            return DexcomConnectionStatusResponse(
+                provider: "dexcom",
+                status: "connected",
+                connectedAt: Date(),
+                lastSyncAt: Date(),
+                errorMessage: nil
+            )
+        case .remote(let baseURL):
+            _ = try await post(path: "/dexcom/sync", body: EmptyBody(), to: baseURL) as DexcomSyncEnvelope
+            return try await get(path: "/dexcom/connect/status", from: baseURL)
+        }
+    }
+
+    func fetchGlucoseReadings(start: Date? = nil, end: Date? = nil) async throws -> [GlucoseReading] {
+        switch environment.mode {
+        case .stub:
+            let response = try await fetchWeeklyGlucoseSummary()
+            return response.summary.readings
+        case .remote(let baseURL):
+            var components = URLComponents(url: baseURL.appending(path: "/cgm/readings"), resolvingAgainstBaseURL: false)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+
+            var queryItems: [URLQueryItem] = []
+            if let start {
+                queryItems.append(URLQueryItem(name: "start", value: formatter.string(from: start)))
+            }
+            if let end {
+                queryItems.append(URLQueryItem(name: "end", value: formatter.string(from: end)))
+            }
+            components?.queryItems = queryItems.isEmpty ? nil : queryItems
+
+            guard let url = components?.url else {
+                throw BackendError.invalidResponse
+            }
+
+            var request = URLRequest(url: url)
+            configureHeaders(for: &request)
+            let (data, response) = try await session.data(for: request)
+            return try decode(GlucoseReadingsEnvelope.self, from: data, response: response).readings
         }
     }
 
@@ -129,7 +214,9 @@ final class BackendClient {
 
     private func get<Response: Decodable>(path: String, from baseURL: URL) async throws -> Response {
         let url = baseURL.appending(path: path)
-        let (data, response) = try await session.data(from: url)
+        var request = URLRequest(url: url)
+        configureHeaders(for: &request)
+        let (data, response) = try await session.data(for: request)
         return try decode(Response.self, from: data, response: response)
     }
 
@@ -140,9 +227,14 @@ final class BackendClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        configureHeaders(for: &request)
         request.httpBody = try JSONEncoder().encode(body)
         let (data, response) = try await session.data(for: request)
         return try decode(Response.self, from: data, response: response)
+    }
+
+    private func configureHeaders(for request: inout URLRequest) {
+        request.setValue(defaultUserID, forHTTPHeaderField: "X-User-Id")
     }
 
     private func decode<Response: Decodable>(_ type: Response.Type, from data: Data, response: URLResponse) throws -> Response {
@@ -160,4 +252,20 @@ final class BackendClient {
         }
         return decoded
     }
+}
+
+private struct EmptyBody: Encodable {}
+
+private struct DexcomSyncEnvelope: Codable {
+    let status: String
+    let syncedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case syncedAt = "synced_at"
+    }
+}
+
+private struct GlucoseReadingsEnvelope: Codable {
+    let readings: [GlucoseReading]
 }

@@ -56,11 +56,13 @@ private struct PrototypeOnboardingFlowView: View {
 }
 
 private struct PrototypeCareGoalsStep: View {
+    @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
+
     let onBack: () -> Void
     let onContinue: () -> Void
 
     @State private var selectedGoals: Set<String> = ["Reduce spikes"]
-    @State private var usesCGM = true
     @State private var wantsMedicationReminders = true
 
     private let goals = [
@@ -110,22 +112,27 @@ private struct PrototypeCareGoalsStep: View {
                             }
                         }
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Do you use a CGM?")
-                                .font(.headline.weight(.semibold))
-                            HStack(spacing: 10) {
-                                PrototypeChoicePill(
-                                    title: "Yes",
-                                    isSelected: usesCGM,
-                                    action: { usesCGM = true }
-                                )
-                                PrototypeChoicePill(
-                                    title: "No",
-                                    isSelected: !usesCGM,
-                                    action: { usesCGM = false }
-                                )
+                        PrototypeDexcomConnectionCard(
+                            statusTitle: dexcomViewModel.statusTitle,
+                            statusDetail: dexcomViewModel.statusLabel,
+                            actionTitle: dexcomViewModel.actionTitle,
+                            isConnecting: dexcomViewModel.isConnecting,
+                            isSyncing: dexcomViewModel.isSyncing,
+                            isConnected: dexcomViewModel.connection.status == .connected,
+                            errorMessage: dexcomViewModel.connection.status == .error ? dexcomViewModel.errorMessage : nil,
+                            onConnect: {
+                                Task {
+                                    if let authorizationURL = await dexcomViewModel.requestConnectionURL() {
+                                        openURL(authorizationURL)
+                                    }
+                                }
+                            },
+                            onSync: {
+                                Task {
+                                    await dexcomViewModel.syncAndLoadSummary()
+                                }
                             }
-                        }
+                        )
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Medication reminders")
@@ -187,6 +194,9 @@ private struct PrototypeCareGoalsStep: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
+        .task {
+            await dexcomViewModel.bootstrapIfNeeded()
+        }
     }
 }
 
@@ -298,6 +308,8 @@ private struct PrototypeSupportPreferencesStep: View {
 }
 
 private struct PrototypeHomeView: View {
+    @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
+
     let onResetToOnboarding: () -> Void
 
     private enum Destination: Hashable {
@@ -335,7 +347,7 @@ private struct PrototypeHomeView: View {
                             PrototypeSummaryCard(
                                 mealsLoggedThisWeek: viewModel.mealsLoggedThisWeek,
                                 latestCartItemCount: viewModel.latestCartItemCount,
-                                cgmStatusLabel: viewModel.cgmStatusLabel
+                                cgmStatusLabel: dexcomViewModel.statusLabel
                             )
 
                             Button {
@@ -420,6 +432,10 @@ private struct PrototypeHomeView: View {
             .mockupsFullscreen()
             .navigationBarBackButtonHidden(true)
             .task {
+                await dexcomViewModel.bootstrapIfNeeded()
+                await viewModel.reload()
+            }
+            .task(id: dexcomViewModel.connection.updatedAt) {
                 await viewModel.reload()
             }
             .navigationDestination(for: Destination.self) { destination in
@@ -437,7 +453,7 @@ private struct PrototypeHomeView: View {
                 case .plateFeedback:
                     PlateFeedbackMockView()
                 case .cgmData:
-                    WeeklyGlucoseOverviewMockView(
+                    PrototypeWeeklyGlucoseView(
                         onPlanMealsForNextWeek: {
                             path.append(.selectMeals)
                         }
@@ -446,6 +462,106 @@ private struct PrototypeHomeView: View {
                     ShoppingCartMockView()
                 }
             }
+        }
+    }
+}
+
+private struct PrototypeDexcomConnectionCard: View {
+    let statusTitle: String
+    let statusDetail: String
+    let actionTitle: String
+    let isConnecting: Bool
+    let isSyncing: Bool
+    let isConnected: Bool
+    let errorMessage: String?
+    let onConnect: () -> Void
+    let onSync: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Dexcom connection")
+                .font(.headline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(statusTitle)
+                    .font(.subheadline.weight(.semibold))
+                Text(statusDetail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let errorMessage, !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button(action: onConnect) {
+                    HStack(spacing: 8) {
+                        if isConnecting {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                        Text(actionTitle)
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.primary)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isConnecting)
+
+                if isConnected {
+                    Button(action: onSync) {
+                        HStack(spacing: 8) {
+                            if isSyncing {
+                                ProgressView()
+                                    .tint(AppTheme.primary)
+                            }
+                            Text(isSyncing ? "Syncing..." : "Sync now")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(uiColor: .tertiarySystemFill))
+                        .foregroundStyle(.primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSyncing)
+                }
+            }
+        }
+    }
+}
+
+private struct PrototypeWeeklyGlucoseView: View {
+    @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
+
+    let onPlanMealsForNextWeek: (() -> Void)?
+
+    var body: some View {
+        WeeklyGlucoseOverviewMockView(
+            summary: dexcomViewModel.weeklySummary,
+            cgmStatusLabel: dexcomViewModel.statusLabel,
+            errorMessage: dexcomViewModel.errorMessage,
+            isSyncing: dexcomViewModel.isSyncing,
+            onSync: {
+                Task {
+                    await dexcomViewModel.syncAndLoadSummary()
+                }
+            },
+            onPlanMealsForNextWeek: onPlanMealsForNextWeek
+        )
+        .task {
+            await dexcomViewModel.bootstrapIfNeeded()
+            await dexcomViewModel.loadWeeklySummary()
         }
     }
 }

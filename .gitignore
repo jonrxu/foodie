@@ -97,3 +97,10 @@ Foodie/AppConfig.swift
 
 # Local research / writing
 Thesis/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv-test/
+backend/data/

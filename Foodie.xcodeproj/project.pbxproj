@@ -414,8 +414,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Bites;
+				"INFOPLIST_KEY_CFBundleURLTypes[0][CFBundleTypeRole]" = Editor;
+				"INFOPLIST_KEY_CFBundleURLTypes[0][CFBundleURLName]" = com.jonx.Foodie;
+				"INFOPLIST_KEY_CFBundleURLTypes[0][CFBundleURLSchemes][0]" = foodie;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To snapshot meals for quick logging.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "To help hand off grocery orders using your local store.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "To import a meal photo from your library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -446,8 +449,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Bites;
+				"INFOPLIST_KEY_CFBundleURLTypes[0][CFBundleTypeRole]" = Editor;
+				"INFOPLIST_KEY_CFBundleURLTypes[0][CFBundleURLName]" = com.jonx.Foodie;
+				"INFOPLIST_KEY_CFBundleURLTypes[0][CFBundleURLSchemes][0]" = foodie;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To snapshot meals for quick logging.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "To help hand off grocery orders using your local store.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "To import a meal photo from your library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

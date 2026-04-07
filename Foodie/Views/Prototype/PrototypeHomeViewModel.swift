@@ -37,6 +37,9 @@ final class PrototypeHomeViewModel: ObservableObject {
 
         switch connection.status {
         case .connected:
+            if let lastSyncAt = connection.lastSyncAt {
+                return "Synced \(RelativeDateTimeFormatter().localizedString(for: lastSyncAt, relativeTo: Date()))"
+            }
             return "Dexcom connected"
         case .pending:
             return "Dexcom setup pending"
