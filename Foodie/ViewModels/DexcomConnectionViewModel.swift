@@ -161,7 +161,7 @@ final class DexcomConnectionViewModel: ObservableObject {
             )
             try await repositories.connections.save(mappedConnection)
             connection = mappedConnection
-            try await loadWeeklySummary(forceRemote: true)
+            await loadWeeklySummary(forceRemote: true)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription

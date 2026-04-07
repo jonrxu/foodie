@@ -309,6 +309,7 @@ private struct PrototypeSupportPreferencesStep: View {
 
 private struct PrototypeHomeView: View {
     @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
+    @EnvironmentObject private var mealFlowViewModel: PrototypeMealFlowViewModel
 
     let onResetToOnboarding: () -> Void
 
@@ -438,6 +439,12 @@ private struct PrototypeHomeView: View {
             .task(id: dexcomViewModel.connection.updatedAt) {
                 await viewModel.reload()
             }
+            .task(id: mealFlowViewModel.latestMealLog?.id) {
+                await viewModel.reload()
+            }
+            .task(id: mealFlowViewModel.activeCartDraft?.updatedAt) {
+                await viewModel.reload()
+            }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
                 case .selectMeals:
@@ -445,13 +452,17 @@ private struct PrototypeHomeView: View {
                 case .foodLog:
                     FoodLoggingMockView(
                         onModeSelected: { mode in
-                            if mode == .takePhoto {
-                                path.append(.plateFeedback)
+                            Task {
+                                if await mealFlowViewModel.logMeal(using: mode) {
+                                    await MainActor.run {
+                                        path.append(.plateFeedback)
+                                    }
+                                }
                             }
                         }
                     )
                 case .plateFeedback:
-                    PlateFeedbackMockView()
+                    PrototypeMealFeedbackView()
                 case .cgmData:
                     PrototypeWeeklyGlucoseView(
                         onPlanMealsForNextWeek: {
@@ -459,7 +470,7 @@ private struct PrototypeHomeView: View {
                         }
                     )
                 case .groceries:
-                    ShoppingCartMockView()
+                    PrototypeShoppingCartView()
                 }
             }
         }

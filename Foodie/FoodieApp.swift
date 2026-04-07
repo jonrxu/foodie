@@ -12,6 +12,7 @@ struct FoodieApp: App {
     @StateObject private var session = AppSession.shared
     @StateObject private var preferences = UserPreferences.shared
     @StateObject private var dexcomViewModel = DexcomConnectionViewModel.shared
+    @StateObject private var mealFlowViewModel = PrototypeMealFlowViewModel.shared
 
     var body: some Scene {
         WindowGroup {
@@ -19,8 +20,10 @@ struct FoodieApp: App {
                 .environmentObject(session)
                 .environmentObject(preferences)
                 .environmentObject(dexcomViewModel)
+                .environmentObject(mealFlowViewModel)
                 .task {
                     await dexcomViewModel.bootstrapIfNeeded()
+                    await mealFlowViewModel.bootstrapIfNeeded()
                 }
                 .onOpenURL { url in
                     Task {
