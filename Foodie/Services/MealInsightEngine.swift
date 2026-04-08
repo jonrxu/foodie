@@ -5,12 +5,12 @@
 
 import Foundation
 
-struct MealImpactPoint: Hashable {
+struct MealImpactPoint: Codable, Hashable {
     let minute: Double
     let glucose: Double
 }
 
-struct MealImpactChartData: Hashable {
+struct MealImpactChartData: Codable, Hashable {
     let withMeal: [MealImpactPoint]
     let withoutMeal: [MealImpactPoint]
 }

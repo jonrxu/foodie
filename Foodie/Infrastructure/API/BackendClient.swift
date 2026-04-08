@@ -51,8 +51,18 @@ final class BackendClient {
         let summary: GlucoseSummary
     }
 
-    struct MealFeedbackResponse: Codable {
+    struct MealInsightResponse: Codable {
+        let mealLog: MealLog
+        let mealImageName: String?
+        let suggestionImageName: String?
         let feedback: MealFeedback
+        let spikeEvent: SpikeEvent?
+        let impact: MealImpactChartData
+        let suggestedCartItems: [CartItem]
+    }
+
+    struct RecentMealsResponse: Codable {
+        let meals: [MealLog]
     }
 
     struct CartGenerationResponse: Codable {
@@ -172,10 +182,47 @@ final class BackendClient {
         }
     }
 
-    func fetchMealFeedback(for mealLogID: UUID) async throws -> MealFeedbackResponse {
+    func createMealLog(_ mealLog: MealLog) async throws -> MealLog {
         switch environment.mode {
         case .stub:
-            return MealFeedbackResponse(
+            return mealLog
+        case .remote(let baseURL):
+            return try await post(path: "/meals", body: mealLog, to: baseURL)
+        }
+    }
+
+    func fetchRecentMeals(limit: Int = 10) async throws -> [MealLog] {
+        switch environment.mode {
+        case .stub:
+            return []
+        case .remote(let baseURL):
+            var components = URLComponents(url: baseURL.appending(path: "/meals/recent"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+            guard let url = components?.url else {
+                throw BackendError.invalidResponse
+            }
+
+            var request = URLRequest(url: url)
+            configureHeaders(for: &request)
+            let (data, response) = try await session.data(for: request)
+            return try decode(RecentMealsResponse.self, from: data, response: response).meals
+        }
+    }
+
+    func fetchMealInsight(for mealLogID: UUID) async throws -> MealInsightResponse {
+        switch environment.mode {
+        case .stub:
+            let mealLog = MealLog(
+                id: mealLogID,
+                loggedAt: Date(),
+                source: .photo,
+                summary: "Chicken and fries",
+                rawInput: "Captured meal photo"
+            )
+            return MealInsightResponse(
+                mealLog: mealLog,
+                mealImageName: "chickenandfries",
+                suggestionImageName: "chickenandsalad",
                 feedback: MealFeedback(
                     mealLogID: mealLogID,
                     mode: .predicted,
@@ -184,7 +231,29 @@ final class BackendClient {
                     coachMessage: "This meal is nicely balanced. You may see a short rise in your blood sugar, followed by a steady decrease.",
                     suggestedSwap: "Swap fries for a side salad",
                     suggestedCartItems: ["Mixed greens", "Cherry tomatoes", "Cucumbers"]
-                )
+                ),
+                spikeEvent: nil,
+                impact: MealImpactChartData(
+                    withMeal: [
+                        MealImpactPoint(minute: 0, glucose: 118),
+                        MealImpactPoint(minute: 30, glucose: 144),
+                        MealImpactPoint(minute: 60, glucose: 152),
+                        MealImpactPoint(minute: 90, glucose: 136),
+                        MealImpactPoint(minute: 120, glucose: 123)
+                    ],
+                    withoutMeal: [
+                        MealImpactPoint(minute: 0, glucose: 118),
+                        MealImpactPoint(minute: 30, glucose: 116.8),
+                        MealImpactPoint(minute: 60, glucose: 115.6),
+                        MealImpactPoint(minute: 90, glucose: 114.7),
+                        MealImpactPoint(minute: 120, glucose: 113.9)
+                    ]
+                ),
+                suggestedCartItems: [
+                    CartItem(name: "Mixed greens", category: "Produce", quantity: "1 box"),
+                    CartItem(name: "Cherry tomatoes", category: "Produce", quantity: "1 pint"),
+                    CartItem(name: "Cucumbers", category: "Produce", quantity: "2 ct")
+                ]
             )
         case .remote(let baseURL):
             return try await get(path: "/meals/\(mealLogID.uuidString)/feedback", from: baseURL)
@@ -228,7 +297,9 @@ final class BackendClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         configureHeaders(for: &request)
-        request.httpBody = try JSONEncoder().encode(body)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601WithFallback
+        request.httpBody = try encoder.encode(body)
         let (data, response) = try await session.data(for: request)
         return try decode(Response.self, from: data, response: response)
     }

@@ -36,13 +36,19 @@ final class PrototypeMealFlowViewModel: ObservableObject {
     }
 
     func reload() async {
+        if let remoteMeals = try? await backendClient.fetchRecentMeals(limit: 3), !remoteMeals.isEmpty {
+            for remoteMeal in remoteMeals {
+                try? await repositories.mealLogs.upsert(remoteMeal)
+            }
+        }
+
         let recentMeals = (try? await repositories.mealLogs.recent(limit: 1)) ?? []
         latestMealLog = recentMeals.first
         activeCartDraft = try? await repositories.carts.fetchLatestDraft()
 
         let readings = await loadAvailableReadings()
         if let latestMealLog {
-            latestInsight = engine.buildInsight(for: latestMealLog, readings: readings)
+            latestInsight = await loadInsight(for: latestMealLog, readings: readings)
         } else {
             latestInsight = nil
         }
@@ -54,17 +60,26 @@ final class PrototypeMealFlowViewModel: ObservableObject {
         defer { isLoggingMeal = false }
 
         let readings = await loadAvailableReadings()
-        let mealLog = engine.createMealLog(for: mode, using: readings)
+        let draftMealLog = engine.createMealLog(for: mode, using: readings)
 
         do {
-            try await repositories.mealLogs.upsert(mealLog)
-            latestMealLog = mealLog
-            latestInsight = engine.buildInsight(for: mealLog, readings: readings)
+            let persistedMealLog = try await backendClient.createMealLog(draftMealLog)
+            try await repositories.mealLogs.upsert(persistedMealLog)
+            latestMealLog = persistedMealLog
+            latestInsight = await loadInsight(for: persistedMealLog, readings: readings)
             errorMessage = nil
             return true
         } catch {
-            errorMessage = error.localizedDescription
-            return false
+            do {
+                try await repositories.mealLogs.upsert(draftMealLog)
+                latestMealLog = draftMealLog
+                latestInsight = engine.buildInsight(for: draftMealLog, readings: readings)
+                errorMessage = nil
+                return true
+            } catch {
+                errorMessage = error.localizedDescription
+                return false
+            }
         }
     }
 
@@ -102,6 +117,23 @@ final class PrototypeMealFlowViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             return []
+        }
+    }
+
+    private func loadInsight(for mealLog: MealLog, readings: [GlucoseReading]) async -> MealInsightContext {
+        do {
+            let response = try await backendClient.fetchMealInsight(for: mealLog.id)
+            return MealInsightContext(
+                mealLog: response.mealLog,
+                mealImageName: response.mealImageName,
+                suggestionImageName: response.suggestionImageName,
+                feedback: response.feedback,
+                spikeEvent: response.spikeEvent,
+                impact: response.impact,
+                suggestedCartItems: response.suggestedCartItems
+            )
+        } catch {
+            return engine.buildInsight(for: mealLog, readings: readings)
         }
     }
 }
