@@ -13,8 +13,18 @@ struct PrototypeAppShellView: View {
     var body: some View {
         Group {
             if session.isOnboardingPresented {
-                PrototypeOnboardingFlowView {
-                    session.completeOnboarding()
+                PrototypeOnboardingFlowView { dietPrefs, careGoals, supports in
+                    Task {
+                        if let response = try? await BackendClient.shared.registerUser(
+                            name: "",
+                            dietPreferences: dietPrefs,
+                            careGoals: careGoals,
+                            supportPreferences: supports
+                        ) {
+                            BackendClient.saveUserID(response.id)
+                        }
+                        session.completeOnboarding()
+                    }
                 }
             } else {
                 PrototypeHomeView(
@@ -28,27 +38,37 @@ struct PrototypeAppShellView: View {
 }
 
 private struct PrototypeOnboardingFlowView: View {
-    let onComplete: () -> Void
+    let onComplete: ([String], [String], [String]) -> Void
 
     @State private var stepIndex = 0
+    @State private var collectedDietPrefs: [String] = []
+    @State private var collectedCareGoals: [String] = []
 
     var body: some View {
         Group {
             switch stepIndex {
             case 0:
                 ProfileSetupMockView(
-                    onContinue: { stepIndex = 1 },
+                    onContinue: { prefs in
+                        collectedDietPrefs = prefs
+                        stepIndex = 1
+                    },
                     allowTapToDismiss: false
                 )
             case 1:
                 PrototypeCareGoalsStep(
                     onBack: { stepIndex = 0 },
-                    onContinue: { stepIndex = 2 }
+                    onContinue: { goals in
+                        collectedCareGoals = goals
+                        stepIndex = 2
+                    }
                 )
             default:
                 PrototypeSupportPreferencesStep(
                     onBack: { stepIndex = 1 },
-                    onContinue: onComplete
+                    onContinue: { supports in
+                        onComplete(collectedDietPrefs, collectedCareGoals, supports)
+                    }
                 )
             }
         }
@@ -60,7 +80,7 @@ private struct PrototypeCareGoalsStep: View {
     @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
 
     let onBack: () -> Void
-    let onContinue: () -> Void
+    let onContinue: ([String]) -> Void
 
     @State private var selectedGoals: Set<String> = ["Reduce spikes"]
     @State private var wantsMedicationReminders = true
@@ -173,7 +193,9 @@ private struct PrototypeCareGoalsStep: View {
                         }
                         .buttonStyle(.plain)
 
-                        Button(action: onContinue) {
+                        Button {
+                            onContinue(Array(selectedGoals))
+                        } label: {
                             Text("Continue")
                                 .font(.headline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
@@ -202,7 +224,7 @@ private struct PrototypeCareGoalsStep: View {
 
 private struct PrototypeSupportPreferencesStep: View {
     let onBack: () -> Void
-    let onContinue: () -> Void
+    let onContinue: ([String]) -> Void
 
     @State private var selectedSupports: Set<String> = ["Meal reminders", "Grocery reminders"]
 
@@ -283,7 +305,9 @@ private struct PrototypeSupportPreferencesStep: View {
                         }
                         .buttonStyle(.plain)
 
-                        Button(action: onContinue) {
+                        Button {
+                            onContinue(Array(selectedSupports))
+                        } label: {
                             Text("Go to dashboard")
                                 .font(.headline.weight(.semibold))
                                 .frame(maxWidth: .infinity)

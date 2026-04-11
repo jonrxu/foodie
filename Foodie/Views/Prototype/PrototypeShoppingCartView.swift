@@ -10,6 +10,7 @@ struct PrototypeShoppingCartView: View {
     @EnvironmentObject private var mealFlowViewModel: PrototypeMealFlowViewModel
 
     @State private var showInstacartCheckout = false
+    @State private var isHandingOffToCheckout = false
 
     var body: some View {
         GeometryReader { geo in
@@ -94,20 +95,52 @@ struct PrototypeShoppingCartView: View {
     }
 
     private var orderButton: some View {
-        HStack {
-            Spacer()
-            Button {
-                showInstacartCheckout = true
-            } label: {
-                Text("Order on Instacart")
-                    .font(.title3.weight(.semibold))
+        VStack(spacing: 8) {
+            HStack {
+                Spacer()
+                Button {
+                    Task {
+                        guard !isHandingOffToCheckout else { return }
+                        await MainActor.run {
+                            isHandingOffToCheckout = true
+                        }
+                        let didPrepare = await mealFlowViewModel.prepareCheckout()
+                        if didPrepare {
+                            try? await Task.sleep(for: .milliseconds(450))
+                            await MainActor.run {
+                                showInstacartCheckout = true
+                            }
+                        }
+                        await MainActor.run {
+                            isHandingOffToCheckout = false
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                        }
+                        Text((mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout) ? "Preparing..." : "Order on Instacart")
+                            .font(.title3.weight(.semibold))
+                    }
                     .padding(.horizontal, 26)
                     .padding(.vertical, 12)
                     .foregroundStyle(.white)
                     .background(AppTheme.primary)
                     .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(mealFlowViewModel.activeCartDraft == nil || mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout)
+                Spacer()
             }
-            Spacer()
+
+            if mealFlowViewModel.activeCartDraft?.checkoutURL != nil {
+                Text("Instacart handoff ready")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

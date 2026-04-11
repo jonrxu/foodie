@@ -65,22 +65,83 @@ final class BackendClient {
         let meals: [MealLog]
     }
 
-    struct CartGenerationResponse: Codable {
-        let draft: CartDraft
+    struct CartDraftResponse: Codable {
+        let draft: CartDraft?
+    }
+
+    struct CartGenerationRequest: Encodable {
+        let mealLogID: UUID?
+    }
+
+    struct CartCheckoutRequest: Encodable {
+        let draftID: UUID?
+    }
+
+    struct RegisterUserRequest: Encodable {
+        let displayName: String
+        let dietPreferences: [String]
+        let careGoals: [String]
+        let supportPreferences: [String]
+    }
+
+    struct RegisterUserResponse: Decodable {
+        let id: String
+        let displayName: String
+        let dietPreferences: [String]
+        let careGoals: [String]
+        let supportPreferences: [String]
     }
 
     static let shared = BackendClient()
 
+    private static let userIDKeychainKey = "backend_user_id"
+
+    static func saveUserID(_ id: String) {
+        KeychainStore.shared.write(id, account: userIDKeychainKey)
+    }
+
     private let environment: APIEnvironment
     private let session: URLSession
-    private let defaultUserID: String
+    private let fallbackUserID: String
+
+    private var effectiveUserID: String {
+        KeychainStore.shared.read(account: Self.userIDKeychainKey) ?? fallbackUserID
+    }
 
     init(environment: APIEnvironment = .current,
          session: URLSession = .shared,
          defaultUserID: String = AppConfig.defaultBackendUserID) {
         self.environment = environment
         self.session = session
-        self.defaultUserID = defaultUserID
+        self.fallbackUserID = defaultUserID
+    }
+
+    func registerUser(name: String,
+                      dietPreferences: [String] = [],
+                      careGoals: [String] = [],
+                      supportPreferences: [String] = []) async throws -> RegisterUserResponse {
+        switch environment.mode {
+        case .stub:
+            return RegisterUserResponse(
+                id: fallbackUserID,
+                displayName: name,
+                dietPreferences: dietPreferences,
+                careGoals: careGoals,
+                supportPreferences: supportPreferences
+            )
+        case .remote(let baseURL):
+            return try await post(
+                path: "/users/register",
+                body: RegisterUserRequest(
+                    displayName: name,
+                    dietPreferences: dietPreferences,
+                    careGoals: careGoals,
+                    supportPreferences: supportPreferences
+                ),
+                to: baseURL,
+                requiresAuth: false
+            )
+        }
     }
 
     func startDexcomAuthorization() async throws -> DexcomAuthStartResponse {
@@ -260,24 +321,71 @@ final class BackendClient {
         }
     }
 
-    func generateCart(for profile: ProfileSnapshot) async throws -> CartGenerationResponse {
+    func generateCart(mealLogID: UUID? = nil) async throws -> CartDraft {
         switch environment.mode {
         case .stub:
-            return CartGenerationResponse(
-                draft: CartDraft(
-                    title: "Weekly groceries",
-                    source: .groceryPlanner,
-                    storeName: "GIANT",
-                    totalEstimate: 42.10,
-                    items: [
-                        CartItem(name: "Bananas", category: "Produce", quantity: "4 ct"),
-                        CartItem(name: "Greek yogurt", category: "Protein", quantity: "1 tub"),
-                        CartItem(name: "Broccoli", category: "Produce", quantity: "2 crowns")
-                    ]
-                )
+            return CartDraft(
+                id: UUID(),
+                title: "Recommended grocery swaps",
+                source: .mealFeedback,
+                storeName: "GIANT",
+                totalEstimate: 21.76,
+                items: [
+                    CartItem(name: "Mixed greens", category: "Produce", quantity: "1 box", estimatedPrice: 4.29),
+                    CartItem(name: "Cherry tomatoes", category: "Produce", quantity: "1 pint", estimatedPrice: 3.49),
+                    CartItem(name: "Cucumbers", category: "Produce", quantity: "2 ct", estimatedPrice: 1.79),
+                    CartItem(name: "Chicken breast", category: "Protein", quantity: "1.5 lb", estimatedPrice: 8.99),
+                    CartItem(name: "Whole-grain bread", category: "Carbs", quantity: "1 loaf", estimatedPrice: 4.49)
+                ]
             )
         case .remote(let baseURL):
-            return try await post(path: "/cart/generate", body: profile, to: baseURL)
+            let response: CartDraftResponse = try await post(
+                path: "/cart/generate",
+                body: CartGenerationRequest(mealLogID: mealLogID),
+                to: baseURL
+            )
+            guard let draft = response.draft else {
+                throw BackendError.invalidResponse
+            }
+            return draft
+        }
+    }
+
+    func fetchLatestCartDraft() async throws -> CartDraft? {
+        switch environment.mode {
+        case .stub:
+            return nil
+        case .remote(let baseURL):
+            let response: CartDraftResponse = try await get(path: "/cart/latest", from: baseURL)
+            return response.draft
+        }
+    }
+
+    func prepareCartCheckout(draftID: UUID? = nil) async throws -> CartDraft {
+        switch environment.mode {
+        case .stub:
+            return CartDraft(
+                title: "Recommended grocery swaps",
+                source: .mealFeedback,
+                storeName: "GIANT",
+                totalEstimate: 21.76,
+                checkoutURL: URL(string: "https://www.instacart.com/store/giant?foodie_cart_id=stub-cart"),
+                items: [
+                    CartItem(name: "Mixed greens", category: "Produce", quantity: "1 box", estimatedPrice: 4.29),
+                    CartItem(name: "Cherry tomatoes", category: "Produce", quantity: "1 pint", estimatedPrice: 3.49),
+                    CartItem(name: "Cucumbers", category: "Produce", quantity: "2 ct", estimatedPrice: 1.79)
+                ]
+            )
+        case .remote(let baseURL):
+            let response: CartDraftResponse = try await post(
+                path: "/cart/checkout",
+                body: CartCheckoutRequest(draftID: draftID),
+                to: baseURL
+            )
+            guard let draft = response.draft else {
+                throw BackendError.invalidResponse
+            }
+            return draft
         }
     }
 
@@ -291,12 +399,13 @@ final class BackendClient {
 
     private func post<Body: Encodable, Response: Decodable>(path: String,
                                                             body: Body,
-                                                            to baseURL: URL) async throws -> Response {
+                                                            to baseURL: URL,
+                                                            requiresAuth: Bool = true) async throws -> Response {
         let url = baseURL.appending(path: path)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        configureHeaders(for: &request)
+        if requiresAuth { configureHeaders(for: &request) }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601WithFallback
         request.httpBody = try encoder.encode(body)
@@ -305,7 +414,7 @@ final class BackendClient {
     }
 
     private func configureHeaders(for request: inout URLRequest) {
-        request.setValue(defaultUserID, forHTTPHeaderField: "X-User-Id")
+        request.setValue(effectiveUserID, forHTTPHeaderField: "X-User-Id")
     }
 
     private func decode<Response: Decodable>(_ type: Response.Type, from data: Data, response: URLResponse) throws -> Response {

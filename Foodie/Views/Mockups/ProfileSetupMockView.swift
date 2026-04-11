@@ -10,7 +10,7 @@ import SwiftUI
 struct ProfileSetupMockView: View {
     @Environment(\.dismiss) private var dismiss
 
-    let onContinue: (() -> Void)?
+    let onContinue: (([String]) -> Void)?
     let allowTapToDismiss: Bool
 
     @State private var selectedDiets: Set<String> = ["No red meat"]
@@ -20,7 +20,7 @@ struct ProfileSetupMockView: View {
     private let dietOptions = ["Vegan", "Vegetarian", "No red meat", "No pork"]
     private let dietNeedOptions = ["Low sodium", "Kidney disease", "Blood thinners", "High cholesterol"]
 
-    init(onContinue: (() -> Void)? = nil, allowTapToDismiss: Bool = true) {
+    init(onContinue: (([String]) -> Void)? = nil, allowTapToDismiss: Bool = true) {
         self.onContinue = onContinue
         self.allowTapToDismiss = allowTapToDismiss
     }
@@ -180,8 +180,9 @@ struct ProfileSetupMockView: View {
     }
 
     private func handleContinue() {
+        let prefs = Array(selectedDiets) + Array(selectedDietNeeds)
         if let onContinue {
-            onContinue()
+            onContinue(prefs)
         } else {
             dismiss()
         }

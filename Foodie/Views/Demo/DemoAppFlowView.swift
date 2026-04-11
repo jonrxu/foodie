@@ -41,7 +41,7 @@ private struct DemoOnboardingFlowView: View {
             switch stepIndex {
             case 0:
                 ProfileSetupMockView(
-                    onContinue: { stepIndex = 1 },
+                    onContinue: { _ in stepIndex = 1 },
                     allowTapToDismiss: false
                 )
             case 1:

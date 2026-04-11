@@ -14,6 +14,7 @@ final class PrototypeMealFlowViewModel: ObservableObject {
     @Published private(set) var activeCartDraft: CartDraft?
     @Published private(set) var isLoggingMeal = false
     @Published private(set) var isCreatingCart = false
+    @Published private(set) var isPreparingCheckout = false
     @Published private(set) var errorMessage: String?
 
     private let repositories: PrototypeRepositoryContainer
@@ -44,7 +45,15 @@ final class PrototypeMealFlowViewModel: ObservableObject {
 
         let recentMeals = (try? await repositories.mealLogs.recent(limit: 1)) ?? []
         latestMealLog = recentMeals.first
-        activeCartDraft = try? await repositories.carts.fetchLatestDraft()
+        do {
+            let remoteDraft = try await backendClient.fetchLatestCartDraft()
+            if let remoteDraft {
+                try await repositories.carts.saveDraft(remoteDraft)
+            }
+            activeCartDraft = remoteDraft
+        } catch {
+            activeCartDraft = try? await repositories.carts.fetchLatestDraft()
+        }
 
         let readings = await loadAvailableReadings()
         if let latestMealLog {
@@ -85,16 +94,34 @@ final class PrototypeMealFlowViewModel: ObservableObject {
 
     @discardableResult
     func addSuggestedIngredientsToCart() async -> Bool {
-        guard let insight = latestInsight else { return false }
+        guard let mealLogID = latestInsight?.mealLog.id ?? latestMealLog?.id else { return false }
 
         isCreatingCart = true
         defer { isCreatingCart = false }
 
         do {
-            let existingDraft = try await repositories.carts.fetchLatestDraft()
-            let updatedDraft = engine.buildCartDraft(for: insight, existingDraft: existingDraft)
+            let updatedDraft = try await backendClient.generateCart(mealLogID: mealLogID)
             try await repositories.carts.saveDraft(updatedDraft)
             activeCartDraft = updatedDraft
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func prepareCheckout() async -> Bool {
+        guard let draftID = activeCartDraft?.id else { return false }
+
+        isPreparingCheckout = true
+        defer { isPreparingCheckout = false }
+
+        do {
+            let preparedDraft = try await backendClient.prepareCartCheckout(draftID: draftID)
+            try await repositories.carts.saveDraft(preparedDraft)
+            activeCartDraft = preparedDraft
             errorMessage = nil
             return true
         } catch {

@@ -62,26 +62,6 @@ struct MealInsightEngine {
         return predictedInsight(for: mealLog, template: template, readings: sortedReadings)
     }
 
-    func buildCartDraft(for insight: MealInsightContext, existingDraft: CartDraft?) -> CartDraft {
-        let now = Date()
-        let retainedItems = (existingDraft?.items ?? []).filter { existing in
-            !insight.suggestedCartItems.contains(where: { $0.name == existing.name })
-        }
-
-        let items = insight.suggestedCartItems + retainedItems
-
-        return CartDraft(
-            id: existingDraft?.id ?? UUID(),
-            title: "Weekly groceries",
-            source: .mealFeedback,
-            storeName: "GIANT",
-            createdAt: existingDraft?.createdAt ?? now,
-            updatedAt: now,
-            totalEstimate: 42.10,
-            items: items
-        )
-    }
-
     private func measuredInsight(for mealLog: MealLog,
                                  template: MealInsightTemplate,
                                  readings: [GlucoseReading]) -> MealInsightContext? {

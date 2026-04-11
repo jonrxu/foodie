@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     api_base_url: AnyHttpUrl = "http://localhost:8000"
     app_deep_link_base: str = "foodie://"
     backend_database_path: Path = Path("data/foodie_backend.sqlite3")
+    instacart_handoff_base: AnyHttpUrl = "https://www.instacart.com/store/giant"
 
     dexcom_client_id: str = "replace-me"
     dexcom_client_secret: str = "replace-me"
