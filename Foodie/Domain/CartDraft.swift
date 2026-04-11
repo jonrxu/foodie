@@ -8,6 +8,7 @@ import Foundation
 enum CartDraftSource: String, Codable, CaseIterable, Hashable {
     case groceryPlanner
     case mealFeedback
+    case weeklyCart
     case manual
     case imported
 }

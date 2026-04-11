@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from tests.test_meal_routes import _meal_payload
+from test_meal_routes import _meal_payload
 
 
 def test_generate_cart_from_latest_meal(client: TestClient) -> None:

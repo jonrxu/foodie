@@ -340,6 +340,7 @@ private struct PrototypeHomeView: View {
     private enum Destination: Hashable {
         case selectMeals
         case foodLog
+        case capture(FoodLoggingMode)
         case plateFeedback
         case cgmData
         case groceries
@@ -476,15 +477,19 @@ private struct PrototypeHomeView: View {
                 case .foodLog:
                     FoodLoggingMockView(
                         onModeSelected: { mode in
-                            Task {
-                                if await mealFlowViewModel.logMeal(using: mode) {
-                                    await MainActor.run {
-                                        path.append(.plateFeedback)
-                                    }
+                            path.append(.capture(mode))
+                        }
+                    )
+                case .capture(let mode):
+                    MealCaptureView(mode: mode) { input in
+                        Task {
+                            if await mealFlowViewModel.logMeal(input: input) {
+                                await MainActor.run {
+                                    path.append(.plateFeedback)
                                 }
                             }
                         }
-                    )
+                    }
                 case .plateFeedback:
                     PrototypeMealFeedbackView()
                 case .cgmData:

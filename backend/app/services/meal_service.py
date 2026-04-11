@@ -19,6 +19,7 @@ from app.schemas.meals import (
     SpikeEventPayload,
     SpikeMetricsPayload,
 )
+from app.clients.claude_client import ClaudeClient
 from app.services.cgm_service import CGMService
 from app.services.dexcom_service import DexcomService
 
@@ -38,11 +39,13 @@ class MealService:
         glucose_store: SQLiteGlucoseStore,
         cgm_service: CGMService,
         dexcom_service: DexcomService,
+        claude_client: ClaudeClient | None = None,
     ) -> None:
         self.meal_store = meal_store
         self.glucose_store = glucose_store
         self.cgm_service = cgm_service
         self.dexcom_service = dexcom_service
+        self.claude_client = claude_client
 
     def create_meal(self, user_id: str, meal: MealLogPayload) -> MealLogPayload:
         self.meal_store.upsert_meal(
@@ -271,36 +274,75 @@ class MealService:
             suggestedCartItems=template.cart_items,
         )
 
-    def _template_for(self, meal: MealLogPayload) -> MealTemplate:
-        summary = meal.summary.lower()
-        image_name = self._meal_image_name(meal)
+    def analyze_photo(self, image_base64: str, mime_type: str) -> str:
+        if self.claude_client:
+            result = self.claude_client.analyze_meal_image(image_base64, mime_type)
+            return result.summary
+        return "Photo meal"
 
-        if "soda" in summary:
+    def lookup_barcode(self, code: str) -> str:
+        try:
+            import httpx
+            url = f"https://world.openfoodfacts.org/api/v2/product/{code}.json"
+            response = httpx.get(url, timeout=6.0)
+            response.raise_for_status()
+            product = response.json().get("product", {})
+            name = product.get("product_name") or product.get("generic_name") or ""
+            brand = product.get("brands") or ""
+            serving = product.get("serving_size") or ""
+            parts = [p for p in [brand, name, serving] if p]
+            return ", ".join(parts) if parts else "Scanned product"
+        except Exception:
+            return "Scanned product"
+
+    def _template_for(self, meal: MealLogPayload) -> MealTemplate:
+        if self.claude_client:
+            result = self.claude_client.analyze_meal_text(meal.summary)
+            return MealTemplate(
+                meal_image_name=self._meal_image_name(meal),
+                suggestion_image_name="chickenandsalad",
+                suggested_swap=result.suggested_swap,
+                cart_items=result.cart_items,
+            )
+        return self._static_template_for(meal.summary)
+
+    @classmethod
+    def _static_template_for(cls, summary: str) -> MealTemplate:
+        summary_lower = summary.lower()
+        image_name = cls._static_meal_image_name(summary_lower)
+        if "soda" in summary_lower:
             return MealTemplate(
                 meal_image_name=image_name,
                 suggestion_image_name="chickenandsalad",
                 suggested_swap="Swap soda for water",
                 cart_items=[
-                    self._cart_item("Sparkling water", "Beverage", "1 pack"),
-                    self._cart_item("Chicken breast", "Protein", "1.5 lb"),
-                    self._cart_item("Mixed greens", "Produce", "1 box"),
-                    self._cart_item("Cherry tomatoes", "Produce", "1 pint"),
-                    self._cart_item("Whole-grain bread", "Carbs", "1 loaf"),
+                    cls._cart_item("Sparkling water", "Beverage", "1 pack"),
+                    cls._cart_item("Chicken breast", "Protein", "1.5 lb"),
+                    cls._cart_item("Mixed greens", "Produce", "1 box"),
+                    cls._cart_item("Cherry tomatoes", "Produce", "1 pint"),
+                    cls._cart_item("Whole-grain bread", "Carbs", "1 loaf"),
                 ],
             )
-
         return MealTemplate(
             meal_image_name=image_name,
             suggestion_image_name="chickenandsalad" if image_name == "chickenandfries" else image_name,
             suggested_swap="Swap fries for a side salad",
             cart_items=[
-                self._cart_item("Mixed greens", "Produce", "1 box"),
-                self._cart_item("Cherry tomatoes", "Produce", "1 pint"),
-                self._cart_item("Cucumbers", "Produce", "2 ct"),
-                self._cart_item("Chicken breast", "Protein", "1.5 lb"),
-                self._cart_item("Whole-grain bread", "Carbs", "1 loaf"),
+                cls._cart_item("Mixed greens", "Produce", "1 box"),
+                cls._cart_item("Cherry tomatoes", "Produce", "1 pint"),
+                cls._cart_item("Cucumbers", "Produce", "2 ct"),
+                cls._cart_item("Chicken breast", "Protein", "1.5 lb"),
+                cls._cart_item("Whole-grain bread", "Carbs", "1 loaf"),
             ],
         )
+
+    @staticmethod
+    def _static_meal_image_name(summary_lower: str) -> str | None:
+        if "fries" in summary_lower or "burger" in summary_lower:
+            return "chickenandfries"
+        if "salad" in summary_lower:
+            return "chickenandsalad"
+        return None
 
     def _meal_image_name(self, meal: MealLogPayload) -> str | None:
         for asset in meal.assets:

@@ -7,6 +7,7 @@ import SwiftUI
 
 struct PrototypeShoppingCartView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var mealFlowViewModel: PrototypeMealFlowViewModel
 
     @State private var showInstacartCheckout = false
@@ -108,7 +109,11 @@ struct PrototypeShoppingCartView: View {
                         if didPrepare {
                             try? await Task.sleep(for: .milliseconds(450))
                             await MainActor.run {
-                                showInstacartCheckout = true
+                                if let checkoutURL = mealFlowViewModel.activeCartDraft?.checkoutURL {
+                                    openURL(checkoutURL)
+                                } else {
+                                    showInstacartCheckout = true
+                                }
                             }
                         }
                         await MainActor.run {

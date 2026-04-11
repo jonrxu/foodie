@@ -30,3 +30,8 @@ class CartCheckoutRequest(BaseModel):
 
 class CartDraftEnvelope(BaseModel):
     draft: CartDraftPayload | None = None
+
+
+class WeeklyCartRequest(BaseModel):
+    careGoals: list[str] = []
+    dietPreferences: list[str] = []

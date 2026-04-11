@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user_id
 from app.schemas.meals import MealInsightResponse, MealLogPayload, RecentMealsResponse
@@ -8,6 +9,19 @@ from app.services.container import get_meal_service
 from app.services.meal_service import MealService
 
 router = APIRouter(prefix="/meals", tags=["meals"])
+
+
+class AnalyzePhotoRequest(BaseModel):
+    imageBase64: str
+    mimeType: str = "image/jpeg"
+
+
+class AnalyzePhotoResponse(BaseModel):
+    summary: str
+
+
+class LookupBarcodeResponse(BaseModel):
+    summary: str
 
 
 @router.post("", response_model=MealLogPayload)
@@ -26,6 +40,26 @@ async def get_recent_meals(
     service: MealService = Depends(get_meal_service),
 ) -> RecentMealsResponse:
     return service.fetch_recent_meals(user_id=user_id, limit=limit)
+
+
+@router.post("/analyze-photo", response_model=AnalyzePhotoResponse)
+async def analyze_photo(
+    payload: AnalyzePhotoRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: MealService = Depends(get_meal_service),
+) -> AnalyzePhotoResponse:
+    summary = service.analyze_photo(payload.imageBase64, payload.mimeType)
+    return AnalyzePhotoResponse(summary=summary)
+
+
+@router.get("/lookup-barcode", response_model=LookupBarcodeResponse)
+async def lookup_barcode(
+    code: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+    service: MealService = Depends(get_meal_service),
+) -> LookupBarcodeResponse:
+    summary = service.lookup_barcode(code)
+    return LookupBarcodeResponse(summary=summary)
 
 
 @router.get("/{meal_id}/feedback", response_model=MealInsightResponse)

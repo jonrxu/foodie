@@ -45,6 +45,11 @@ class SQLiteUserStore:
             )
             conn.commit()
 
+    def list_user_ids(self) -> list[str]:
+        with self._lock, self._connect() as conn:
+            rows = conn.execute("SELECT id FROM users").fetchall()
+        return [str(row["id"]) for row in rows]
+
     def fetch_user(self, user_id: str) -> StoredUser | None:
         with self._lock, self._connect() as conn:
             row = conn.execute(

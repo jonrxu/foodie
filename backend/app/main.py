@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.errors import register_exception_handlers
@@ -11,7 +13,17 @@ from app.config.settings import get_settings
 
 settings = get_settings()
 
-app = FastAPI(title=settings.app_name, version="0.2.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.scheduler import create_scheduler
+    scheduler = create_scheduler()
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title=settings.app_name, version="0.2.0", lifespan=lifespan)
 register_exception_handlers(app)
 app.include_router(health_router)
 app.include_router(users_router)

@@ -6,10 +6,12 @@ from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from app.api.errors import AppError
+from app.clients.claude_client import ClaudeClient
+from app.clients.instacart_client import InstacartClient
 from app.config.settings import Settings
 from app.persistence.cart_store import SQLiteCartStore, StoredCartDraft
 from app.persistence.meal_store import SQLiteMealStore
-from app.schemas.cart import CartCheckoutRequest, CartDraftEnvelope, CartDraftPayload, CartGenerationRequest
+from app.schemas.cart import CartCheckoutRequest, CartDraftEnvelope, CartDraftPayload, CartGenerationRequest, WeeklyCartRequest
 from app.schemas.meals import CartItemPayload, MealInsightResponse
 from app.services.meal_service import MealService
 
@@ -21,11 +23,15 @@ class CartService:
         cart_store: SQLiteCartStore,
         meal_store: SQLiteMealStore,
         meal_service: MealService,
+        claude_client: ClaudeClient | None = None,
+        instacart_client: InstacartClient | None = None,
     ) -> None:
         self.settings = settings
         self.cart_store = cart_store
         self.meal_store = meal_store
         self.meal_service = meal_service
+        self.claude_client = claude_client
+        self.instacart_client = instacart_client
         self.price_lookup = {
             "mixed greens": 4.29,
             "cherry tomatoes": 3.49,
@@ -65,6 +71,63 @@ class CartService:
         )
         return CartDraftEnvelope(draft=draft)
 
+    def generate_weekly_cart(self, user_id: str, request: WeeklyCartRequest) -> CartDraftEnvelope:
+        recent_meals = self.meal_store.fetch_recent_meals(user_id=user_id, limit=14)
+        meal_dicts = [
+            {"loggedAt": s.logged_at.isoformat(), "summary": s.summary}
+            for s in recent_meals
+        ]
+        spike_events = []
+        for stored_meal in recent_meals[:5]:
+            record = self.meal_store.fetch_spike_event(user_id=user_id, meal_log_id=stored_meal.id)
+            if record:
+                spike_events.append({
+                    "deltaMgdl": record.payload.get("metrics", {}).get("deltaMgdl"),
+                    "mealSummary": stored_meal.summary,
+                })
+
+        if self.claude_client:
+            result = self.claude_client.generate_weekly_cart(
+                meals=meal_dicts,
+                spike_events=spike_events,
+                care_goals=request.careGoals,
+                diet_preferences=request.dietPreferences,
+            )
+            items = [self._with_price(item) for item in result.items]
+            title = result.title
+        else:
+            items = [
+                self._with_price(CartItemPayload(
+                    id=uuid4(), name=i.name, category=i.category, quantity=i.quantity, isSelected=True,
+                ))
+                for i in MealService._static_template_for("").cart_items
+            ]
+            title = "Weekly grocery list"
+
+        now = datetime.now(UTC)
+        draft = CartDraftPayload(
+            id=uuid4(),
+            title=title,
+            source="weeklyCart",
+            storeName="GIANT",
+            createdAt=now,
+            updatedAt=now,
+            totalEstimate=round(sum(i.estimatedPrice or 0 for i in items if i.isSelected), 2),
+            checkoutURL=None,
+            items=items,
+        )
+        self.cart_store.upsert_draft(
+            user_id=user_id,
+            draft=StoredCartDraft(
+                id=str(draft.id),
+                source=draft.source,
+                created_at=draft.createdAt,
+                updated_at=draft.updatedAt,
+                payload=draft.model_dump(mode="json"),
+            ),
+        )
+        return CartDraftEnvelope(draft=draft)
+
     def prepare_checkout(self, user_id: str, request: CartCheckoutRequest) -> CartDraftEnvelope:
         stored = None
         if request.draftID is not None:
@@ -80,7 +143,15 @@ class CartService:
             )
 
         draft = CartDraftPayload.model_validate(stored.payload)
-        checkout_url = self._build_checkout_url(user_id=user_id, draft=draft)
+        if self.instacart_client:
+            instacart_result = self.instacart_client.create_shopping_list(
+                items=draft.items,
+                title=draft.title or "Foodie grocery list",
+                store=draft.storeName or "GIANT",
+            )
+            checkout_url = instacart_result.share_url if instacart_result and instacart_result.share_url else self._build_checkout_url(user_id=user_id, draft=draft)
+        else:
+            checkout_url = self._build_checkout_url(user_id=user_id, draft=draft)
         updated_draft = CartDraftPayload(
             id=draft.id,
             title=draft.title,

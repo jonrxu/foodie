@@ -1,6 +1,8 @@
 from functools import lru_cache
 
+from app.clients.claude_client import ClaudeClient
 from app.clients.dexcom_client import DexcomApiClient
+from app.clients.instacart_client import InstacartClient
 from app.config.settings import get_settings
 from app.persistence.cart_store import SQLiteCartStore
 from app.persistence.dexcom_store import SQLiteDexcomConnectionStore
@@ -45,6 +47,17 @@ def get_cart_store() -> SQLiteCartStore:
 
 
 @lru_cache(maxsize=1)
+def get_claude_client() -> ClaudeClient:
+    return ClaudeClient(api_key=get_settings().anthropic_api_key)
+
+
+@lru_cache(maxsize=1)
+def get_instacart_client() -> InstacartClient:
+    s = get_settings()
+    return InstacartClient(api_key=s.instacart_api_key, mcp_url=s.instacart_mcp_url)
+
+
+@lru_cache(maxsize=1)
 def get_dexcom_client() -> DexcomApiClient:
     return DexcomApiClient(settings=get_settings())
 
@@ -70,6 +83,7 @@ def get_meal_service() -> MealService:
         glucose_store=get_glucose_store(),
         cgm_service=get_cgm_service(),
         dexcom_service=get_dexcom_service(),
+        claude_client=get_claude_client(),
     )
 
 
@@ -80,4 +94,6 @@ def get_cart_service() -> CartService:
         cart_store=get_cart_store(),
         meal_store=get_meal_store(),
         meal_service=get_meal_service(),
+        claude_client=get_claude_client(),
+        instacart_client=get_instacart_client(),
     )

@@ -199,7 +199,7 @@ struct MealInsightEngine {
         )
     }
 
-    private func alignedMealTime(using readings: [GlucoseReading]) -> Date {
+    func alignedMealTime(using readings: [GlucoseReading]) -> Date {
         let sorted = readings.sorted(by: { $0.timestamp < $1.timestamp })
         guard let latest = sorted.last?.timestamp else {
             return Date()

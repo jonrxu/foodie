@@ -77,6 +77,24 @@ final class BackendClient {
         let draftID: UUID?
     }
 
+    struct AnalyzePhotoRequest: Encodable {
+        let imageBase64: String
+        let mimeType: String
+    }
+
+    struct AnalyzePhotoResponse: Decodable {
+        let summary: String
+    }
+
+    struct LookupBarcodeResponse: Decodable {
+        let summary: String
+    }
+
+    struct WeeklyCartGenerationRequest: Encodable {
+        let careGoals: [String]
+        let dietPreferences: [String]
+    }
+
     struct RegisterUserRequest: Encodable {
         let displayName: String
         let dietPreferences: [String]
@@ -358,6 +376,62 @@ final class BackendClient {
         case .remote(let baseURL):
             let response: CartDraftResponse = try await get(path: "/cart/latest", from: baseURL)
             return response.draft
+        }
+    }
+
+    func analyzePhoto(_ imageData: Data, mimeType: String = "image/jpeg") async throws -> String {
+        switch environment.mode {
+        case .stub:
+            return "Photo meal"
+        case .remote(let baseURL):
+            let response: AnalyzePhotoResponse = try await post(
+                path: "/meals/analyze-photo",
+                body: AnalyzePhotoRequest(imageBase64: imageData.base64EncodedString(), mimeType: mimeType),
+                to: baseURL
+            )
+            return response.summary
+        }
+    }
+
+    func lookupBarcode(code: String) async throws -> String {
+        switch environment.mode {
+        case .stub:
+            return "Scanned product"
+        case .remote(let baseURL):
+            var components = URLComponents(url: baseURL.appending(path: "/meals/lookup-barcode"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "code", value: code)]
+            guard let url = components?.url else { throw BackendError.invalidResponse }
+            var request = URLRequest(url: url)
+            configureHeaders(for: &request)
+            let (data, response) = try await session.data(for: request)
+            return try decode(LookupBarcodeResponse.self, from: data, response: response).summary
+        }
+    }
+
+    func generateWeeklyCart(careGoals: [String] = [], dietPreferences: [String] = []) async throws -> CartDraft {
+        switch environment.mode {
+        case .stub:
+            return CartDraft(
+                title: "Your weekly grocery list",
+                source: .weeklyCart,
+                storeName: "GIANT",
+                totalEstimate: 42.50,
+                items: [
+                    CartItem(name: "Mixed greens", category: "Produce", quantity: "1 box", estimatedPrice: 4.29),
+                    CartItem(name: "Chicken breast", category: "Protein", quantity: "2 lb", estimatedPrice: 12.99),
+                    CartItem(name: "Greek yogurt", category: "Dairy", quantity: "32 oz", estimatedPrice: 5.49),
+                    CartItem(name: "Quinoa", category: "Carbs", quantity: "1 lb", estimatedPrice: 6.99),
+                    CartItem(name: "Broccoli", category: "Produce", quantity: "1 head", estimatedPrice: 2.49)
+                ]
+            )
+        case .remote(let baseURL):
+            let response: CartDraftResponse = try await post(
+                path: "/cart/generate-weekly",
+                body: WeeklyCartGenerationRequest(careGoals: careGoals, dietPreferences: dietPreferences),
+                to: baseURL
+            )
+            guard let draft = response.draft else { throw BackendError.invalidResponse }
+            return draft
         }
     }
 

@@ -93,6 +93,54 @@ final class PrototypeMealFlowViewModel: ObservableObject {
     }
 
     @discardableResult
+    func logMeal(input: MealInput) async -> Bool {
+        isLoggingMeal = true
+        defer { isLoggingMeal = false }
+
+        let readings = await loadAvailableReadings()
+        let loggedAt = engine.alignedMealTime(using: readings)
+
+        let summary: String
+        switch input {
+        case .text(let text):
+            summary = text
+        case .voice(let transcript):
+            summary = transcript
+        case .barcode(let code):
+            summary = (try? await backendClient.lookupBarcode(code: code)) ?? "Scanned product"
+        case .photo(let data, let mimeType):
+            summary = (try? await backendClient.analyzePhoto(data, mimeType: mimeType)) ?? "Photo meal"
+        }
+
+        let mealLog = MealLog(
+            loggedAt: loggedAt,
+            source: input.source,
+            summary: summary,
+            rawInput: summary
+        )
+
+        do {
+            let persisted = try await backendClient.createMealLog(mealLog)
+            try await repositories.mealLogs.upsert(persisted)
+            latestMealLog = persisted
+            latestInsight = await loadInsight(for: persisted, readings: readings)
+            errorMessage = nil
+            return true
+        } catch {
+            do {
+                try await repositories.mealLogs.upsert(mealLog)
+                latestMealLog = mealLog
+                latestInsight = engine.buildInsight(for: mealLog, readings: readings)
+                errorMessage = nil
+                return true
+            } catch {
+                errorMessage = error.localizedDescription
+                return false
+            }
+        }
+    }
+
+    @discardableResult
     func addSuggestedIngredientsToCart() async -> Bool {
         guard let mealLogID = latestInsight?.mealLog.id ?? latestMealLog?.id else { return false }
 
