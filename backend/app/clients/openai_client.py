@@ -15,12 +15,20 @@ Schema:
 {
   "summary": "clean 3-6 word meal description",
   "suggestedSwap": "one specific food swap to reduce glucose spike",
+  "nutrition": {
+    "totals": {
+      "carbohydrateGrams": 45,
+      "addedSugarGrams": 5,
+      "fiberGrams": 3,
+      "proteinGrams": 20
+    }
+  },
   "cartItems": [
     {"name": "item name", "category": "Produce|Protein|Carbs|Dairy|Beverage|Snack", "quantity": "e.g. 1 lb"}
   ]
 }
 
-Include 3-5 cart items that are healthier alternatives relevant to this meal."""
+Estimate the nutrition totals for the full meal. Include 3-5 cart items that are healthier alternatives relevant to this meal."""
 
 _WEEKLY_CART_SYSTEM = """You are a diabetes nutrition coach creating a personalized weekly grocery list.
 Respond with JSON only — no prose.
@@ -41,6 +49,7 @@ class MealAnalysisResult:
     summary: str
     suggested_swap: str
     cart_items: list[CartItemPayload] = field(default_factory=list)
+    nutrition: dict | None = None
 
 
 @dataclass
@@ -171,6 +180,7 @@ class OpenAIClient:
                 summary=data.get("summary", fallback_summary),
                 suggested_swap=data.get("suggestedSwap", "Try adding more vegetables"),
                 cart_items=items,
+                nutrition=data.get("nutrition"),
             )
         except Exception:
             return self._fallback_analysis(fallback_summary)

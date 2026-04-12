@@ -39,7 +39,7 @@ class MealService:
         glucose_store: SQLiteGlucoseStore,
         cgm_service: CGMService,
         dexcom_service: DexcomService,
-        claude_client: ClaudeClient | None = None,
+        claude_client: OpenAIClient | None = None,
     ) -> None:
         self.meal_store = meal_store
         self.glucose_store = glucose_store
@@ -48,6 +48,12 @@ class MealService:
         self.claude_client = claude_client
 
     def create_meal(self, user_id: str, meal: MealLogPayload) -> MealLogPayload:
+        if self.claude_client and meal.analysis is None:
+            result = self.claude_client.analyze_meal_text(meal.summary)
+            analysis: dict = {"suggestedSwap": result.suggested_swap}
+            if result.nutrition:
+                analysis["nutrition"] = result.nutrition
+            meal = meal.model_copy(update={"analysis": analysis})
         self.meal_store.upsert_meal(
             user_id=user_id,
             meal=StoredMealLog(
