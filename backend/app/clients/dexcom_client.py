@@ -44,11 +44,7 @@ class DexcomApiClient:
                 )
             )
 
-        params: dict[str, str] = {}
-        if last_sync_time:
-            params["lastSyncTime"] = self._format_dexcom_datetime(last_sync_time)
-
-        response = self._get("/v3/users/self/dataRange", access_token=access_token, params=params)
+        response = self._get("/v3/users/self/dataRange", access_token=access_token, params={})
         payload = response.json()
         egvs = payload.get("egvs")
         return DexcomDataRange(
