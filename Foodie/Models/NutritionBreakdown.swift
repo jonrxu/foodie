@@ -60,6 +60,14 @@ struct NutritionBreakdown: Codable, Equatable, Hashable {
         self.notes = notes
     }
 
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totals = try c.decode(Totals.self, forKey: .totals)
+        items = try c.decodeIfPresent([Item].self, forKey: .items) ?? []
+        confidence = try c.decodeIfPresent(Confidence.self, forKey: .confidence)
+        notes = try c.decodeIfPresent([String].self, forKey: .notes)
+    }
+
     static let empty = NutritionBreakdown(totals: Totals(), items: [])
 }
 

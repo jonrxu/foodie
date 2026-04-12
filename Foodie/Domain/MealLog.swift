@@ -95,6 +95,19 @@ struct MealAnalysis: Codable, Hashable {
         self.healthTags = healthTags
         self.highlights = highlights
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        mealType = try c.decodeIfPresent(MealTypeValue.self, forKey: .mealType)
+        estimatedCalories = try c.decodeIfPresent(Int.self, forKey: .estimatedCalories)
+        confidence = try c.decodeIfPresent(Double.self, forKey: .confidence)
+        nutrition = try c.decodeIfPresent(NutritionBreakdown.self, forKey: .nutrition)
+        healthIndex = try c.decodeIfPresent(Int.self, forKey: .healthIndex)
+        healthLevel = try c.decodeIfPresent(String.self, forKey: .healthLevel)
+        healthAxes = try c.decodeIfPresent(FoodHealthAssessment.Axes.self, forKey: .healthAxes)
+        healthTags = try c.decodeIfPresent([String].self, forKey: .healthTags) ?? []
+        highlights = try c.decodeIfPresent([String].self, forKey: .highlights) ?? []
+    }
 }
 
 struct MealLog: Identifiable, Codable, Hashable {
