@@ -19,6 +19,7 @@ struct FoodieApp: App {
                 .environmentObject(session)
                 .environmentObject(dexcomViewModel)
                 .environmentObject(mealFlowViewModel)
+                .preferredColorScheme(.light)
                 .task {
                     await dexcomViewModel.bootstrapIfNeeded()
                     await mealFlowViewModel.bootstrapIfNeeded()
