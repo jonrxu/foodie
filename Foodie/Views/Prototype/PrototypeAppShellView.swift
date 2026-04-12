@@ -15,13 +15,17 @@ struct PrototypeAppShellView: View {
             if session.isOnboardingPresented {
                 PrototypeOnboardingFlowView { dietPrefs, careGoals, supports in
                     Task {
-                        if let response = try? await BackendClient.shared.registerUser(
-                            name: "",
-                            dietPreferences: dietPrefs,
-                            careGoals: careGoals,
-                            supportPreferences: supports
-                        ) {
-                            BackendClient.saveUserID(response.id)
+                        // Only register a new user if no ID is stored yet.
+                        // Re-running onboarding must not orphan an existing Dexcom connection.
+                        if BackendClient.storedUserID == nil {
+                            if let response = try? await BackendClient.shared.registerUser(
+                                name: "",
+                                dietPreferences: dietPrefs,
+                                careGoals: careGoals,
+                                supportPreferences: supports
+                            ) {
+                                BackendClient.saveUserID(response.id)
+                            }
                         }
                         session.completeOnboarding()
                     }
@@ -139,6 +143,8 @@ private struct PrototypeCareGoalsStep: View {
                             isConnecting: dexcomViewModel.isConnecting,
                             isSyncing: dexcomViewModel.isSyncing,
                             isConnected: dexcomViewModel.connection.status == .connected,
+                            isPending: dexcomViewModel.connection.status == .pending,
+                            isCheckingStatus: dexcomViewModel.isLoadingStatus,
                             errorMessage: dexcomViewModel.connection.status == .error ? dexcomViewModel.errorMessage : nil,
                             onConnect: {
                                 Task {
@@ -150,6 +156,11 @@ private struct PrototypeCareGoalsStep: View {
                             onSync: {
                                 Task {
                                     await dexcomViewModel.syncAndLoadSummary()
+                                }
+                            },
+                            onCheckStatus: {
+                                Task {
+                                    await dexcomViewModel.refreshConnectionStatus()
                                 }
                             }
                         )
@@ -513,9 +524,12 @@ private struct PrototypeDexcomConnectionCard: View {
     let isConnecting: Bool
     let isSyncing: Bool
     let isConnected: Bool
+    let isPending: Bool
+    let isCheckingStatus: Bool
     let errorMessage: String?
     let onConnect: () -> Void
     let onSync: () -> Void
+    let onCheckStatus: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -556,6 +570,26 @@ private struct PrototypeDexcomConnectionCard: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isConnecting)
+
+                if isPending {
+                    Button(action: onCheckStatus) {
+                        HStack(spacing: 8) {
+                            if isCheckingStatus {
+                                ProgressView()
+                                    .tint(AppTheme.primary)
+                            }
+                            Text(isCheckingStatus ? "Checking..." : "Already done?")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(uiColor: .tertiarySystemFill))
+                        .foregroundStyle(.primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isCheckingStatus)
+                }
 
                 if isConnected {
                     Button(action: onSync) {

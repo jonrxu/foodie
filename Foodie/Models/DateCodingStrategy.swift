@@ -11,6 +11,11 @@ extension JSONDecoder.DateDecodingStrategy {
         .custom { decoder in
             let container = try decoder.singleValueContainer()
             let string = try container.decode(String.self)
+            let fullFormatter = ISO8601DateFormatter()
+            fullFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fullFormatter.date(from: string) {
+                return date
+            }
             if let date = ISO8601DateFormatter().date(from: string) {
                 return date
             }

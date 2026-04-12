@@ -118,6 +118,10 @@ final class BackendClient {
         KeychainStore.shared.write(id, account: userIDKeychainKey)
     }
 
+    static var storedUserID: String? {
+        KeychainStore.shared.read(account: userIDKeychainKey)
+    }
+
     private let environment: APIEnvironment
     private let session: URLSession
     private let fallbackUserID: String

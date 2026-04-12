@@ -163,6 +163,13 @@ final class DexcomConnectionViewModel: ObservableObject {
             connection = mappedConnection
             await loadWeeklySummary(forceRemote: true)
             errorMessage = nil
+        } catch let error as BackendClient.BackendError {
+            if case .badStatusCode(409) = error {
+                // Backend lost the connection (e.g. DB reset). Refresh so UI
+                // flips back to "Connect Dexcom" rather than staying on "Sync now".
+                await refreshConnectionStatus()
+            }
+            errorMessage = error.localizedDescription
         } catch {
             errorMessage = error.localizedDescription
         }
