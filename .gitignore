@@ -90,7 +90,7 @@ fastlane/test_output
 iOSInjectionProject/
 
 # API Keys and Configuration
-Foodie/AppConfig.swift
+# AppConfig.swift is now safe to commit — no secrets, only backend URL
 
 # macOS
 .DS_Store
