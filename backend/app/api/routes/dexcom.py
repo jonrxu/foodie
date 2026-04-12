@@ -75,6 +75,20 @@ async def debug_dexcom_record(
     }
 
 
+@router.get("/debug/all-records")
+async def debug_all_dexcom_records(
+    service: DexcomService = Depends(get_dexcom_service),
+) -> dict:
+    import sqlite3
+    conn = sqlite3.connect(service.store.database_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT user_id, status, connected_at, access_token IS NOT NULL as has_token FROM dexcom_connections"
+    ).fetchall()
+    conn.close()
+    return {"records": [dict(r) for r in rows]}
+
+
 @router.post("/connect/mock-complete", response_model=DexcomConnectionStatusResponse)
 async def mock_complete_connection(
     user_id: str = Depends(get_current_user_id),
