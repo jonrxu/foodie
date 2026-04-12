@@ -24,8 +24,8 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
-    instacart_api_key: str = "keys.0Mk34P75y9dNYO4mJltrWx3Ukgc9biNrWUZnAKR2mvU"
-    instacart_mcp_url: str = "https://mcp.instacart.com/mcp"
+    instacart_api_key: str = ""
+    instacart_mcp_url: str = "https://mcp.dev.instacart.tools/mcp"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

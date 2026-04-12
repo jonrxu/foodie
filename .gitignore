@@ -104,3 +104,7 @@ __pycache__/
 .venv/
 .venv-test/
 backend/data/
+
+# Secrets — never commit real keys
+backend/.env
+.env
