@@ -330,6 +330,7 @@ struct PhotoMealInputView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
     @State private var isAnalyzing = false
+    @State private var showCamera = false
 
     var body: some View {
         GeometryReader { geo in
@@ -340,14 +341,14 @@ struct PhotoMealInputView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Photo log")
                             .font(.system(size: 33, weight: .bold, design: .rounded))
-                        Text("Pick a photo of your meal")
+                        Text("Take or pick a photo of your meal")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
 
                     Spacer(minLength: 20)
 
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         if let image = selectedImage {
                             Image(uiImage: image)
                                 .resizable()
@@ -355,21 +356,41 @@ struct PhotoMealInputView: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 220)
                                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                            HStack(spacing: 10) {
+                                Button {
+                                    showCamera = true
+                                } label: {
+                                    Label("Retake", systemImage: "camera.fill")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.primary)
+                                }
+                                .buttonStyle(.plain)
+
+                                Text("·").foregroundStyle(.secondary)
+
+                                PhotosPicker(selection: $selectedItem, matching: .images) {
+                                    Label("Choose different", systemImage: "photo.on.rectangle")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.primary)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         } else {
-                            PhotosPicker(
-                                selection: $selectedItem,
-                                matching: .images
-                            ) {
+                            // Camera button
+                            Button {
+                                showCamera = true
+                            } label: {
                                 VStack(spacing: 12) {
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 36, weight: .semibold))
                                         .foregroundStyle(AppTheme.primary)
-                                    Text("Select photo")
+                                    Text("Take photo")
                                         .font(.headline.weight(.semibold))
                                         .foregroundStyle(AppTheme.primary)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 180)
+                                .frame(height: 150)
                                 .background(AppTheme.primary.opacity(0.08))
                                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                                 .overlay(
@@ -378,13 +399,21 @@ struct PhotoMealInputView: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                        }
 
-                        if selectedImage != nil {
+                            // Library button
                             PhotosPicker(selection: $selectedItem, matching: .images) {
-                                Text("Choose different photo")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppTheme.primary)
+                                HStack(spacing: 10) {
+                                    Image(systemName: "photo.on.rectangle")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                    Text("Choose from library")
+                                        .font(.headline.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color(uiColor: .tertiarySystemFill))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             .buttonStyle(.plain)
                         }
@@ -445,6 +474,13 @@ struct PhotoMealInputView: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView { image in
+                selectedImage = image
+                showCamera = false
+            }
+            .ignoresSafeArea()
+        }
     }
 
     private var pageBackground: some View {
@@ -454,6 +490,43 @@ struct PhotoMealInputView: View {
                 colors: [.white, .white, Color.blue.opacity(0.003), Color.blue.opacity(0.012)],
                 startPoint: .top, endPoint: .bottom
             )
+        }
+    }
+}
+
+// MARK: - Camera picker
+
+private struct CameraPickerView: UIViewControllerRepresentable {
+    let onCapture: (UIImage) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCapture: onCapture)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onCapture: (UIImage) -> Void
+
+        init(onCapture: @escaping (UIImage) -> Void) {
+            self.onCapture = onCapture
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage {
+                onCapture(image)
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
         }
     }
 }
@@ -557,8 +630,9 @@ struct BarcodeMealInputView: View {
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showScanner) {
-            BarcodeScannerSheet { code in
+            BarcodeScannerModalView { code in
                 scannedCode = code
+            } onClose: {
                 showScanner = false
             }
         }
@@ -575,6 +649,100 @@ struct BarcodeMealInputView: View {
     }
 }
 
+// MARK: - Barcode scanner modal
+
+private struct BarcodeScannerModalView: View {
+    let onScan: (String) -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            BarcodeScannerSheet { code in
+                onScan(code)
+                onClose()
+            }
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Text("Center the barcode in the frame")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.black.opacity(0.45))
+                    .clipShape(Capsule())
+                    .padding(.top, 24)
+
+                Spacer()
+            }
+            .allowsHitTesting(false)
+
+            BarcodeFocusOverlay()
+                .allowsHitTesting(false)
+
+            VStack {
+                Spacer()
+
+                Button(action: onClose) {
+                    Text("Cancel")
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial)
+                        .foregroundStyle(.primary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+            }
+        }
+        .presentationDragIndicator(.hidden)
+    }
+}
+
+private struct BarcodeFocusOverlay: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.white.opacity(0.95), lineWidth: 2)
+                .frame(width: 280, height: 150)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(.clear)
+                )
+                .overlay(alignment: .topLeading) { cornerMarker(rotation: .degrees(0)) }
+                .overlay(alignment: .topTrailing) { cornerMarker(rotation: .degrees(90)) }
+                .overlay(alignment: .bottomTrailing) { cornerMarker(rotation: .degrees(180)) }
+                .overlay(alignment: .bottomLeading) { cornerMarker(rotation: .degrees(270)) }
+
+            VStack(spacing: 8) {
+                Spacer()
+                Text("Hold steady until it scans")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.black.opacity(0.38))
+                    .clipShape(Capsule())
+                    .offset(y: 36)
+            }
+        }
+    }
+
+    private func cornerMarker(rotation: Angle) -> some View {
+        Path { path in
+            path.move(to: CGPoint(x: 0, y: 22))
+            path.addLine(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: 22, y: 0))
+        }
+        .stroke(.white, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+        .frame(width: 22, height: 22)
+        .rotationEffect(rotation)
+        .padding(10)
+    }
+}
+
 // MARK: - Barcode scanner sheet (DataScannerViewController)
 
 private struct BarcodeScannerSheet: UIViewControllerRepresentable {
@@ -584,16 +752,25 @@ private struct BarcodeScannerSheet: UIViewControllerRepresentable {
         Coordinator(onScan: onScan)
     }
 
-    func makeUIViewController(context: Context) -> UINavigationController {
+    func makeUIViewController(context: Context) -> UIViewController {
         guard DataScannerViewController.isSupported && DataScannerViewController.isAvailable else {
-            let alert = UIAlertController(
-                title: "Scanner unavailable",
-                message: "Barcode scanning is not available on this device.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            let nav = UINavigationController(rootViewController: alert)
-            return nav
+            let fallback = UIViewController()
+            fallback.view.backgroundColor = .black
+
+            let label = UILabel()
+            label.text = "Barcode scanning is not available on this device."
+            label.textColor = .white
+            label.numberOfLines = 0
+            label.textAlignment = .center
+            label.translatesAutoresizingMaskIntoConstraints = false
+            fallback.view.addSubview(label)
+
+            NSLayoutConstraint.activate([
+                label.leadingAnchor.constraint(equalTo: fallback.view.leadingAnchor, constant: 24),
+                label.trailingAnchor.constraint(equalTo: fallback.view.trailingAnchor, constant: -24),
+                label.centerYAnchor.constraint(equalTo: fallback.view.centerYAnchor)
+            ])
+            return fallback
         }
         let scanner = DataScannerViewController(
             recognizedDataTypes: [.barcode()],
@@ -605,12 +782,17 @@ private struct BarcodeScannerSheet: UIViewControllerRepresentable {
             isHighlightingEnabled: true
         )
         scanner.delegate = context.coordinator
-        let nav = UINavigationController(rootViewController: scanner)
         try? scanner.startScanning()
-        return nav
+        return scanner
     }
 
-    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+
+    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: Coordinator) {
+        if let scanner = uiViewController as? DataScannerViewController {
+            scanner.stopScanning()
+        }
+    }
 
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
         let onScan: (String) -> Void

@@ -675,7 +675,7 @@ private struct PrototypeSummaryCard: View {
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
         .padding(12)
         .background(.white.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
