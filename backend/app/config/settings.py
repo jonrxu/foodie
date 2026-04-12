@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     dexcom_scope: str = "offline_access"
     dexcom_mock_oauth: bool = True
 
-    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o"
     instacart_api_key: str = "keys.0Mk34P75y9dNYO4mJltrWx3Ukgc9biNrWUZnAKR2mvU"
     instacart_mcp_url: str = "https://mcp.instacart.com/mcp"
 

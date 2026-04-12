@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from app.clients.claude_client import ClaudeClient
+from app.clients.openai_client import OpenAIClient
 from app.clients.dexcom_client import DexcomApiClient
 from app.clients.instacart_client import InstacartClient
 from app.config.settings import get_settings
@@ -47,8 +47,9 @@ def get_cart_store() -> SQLiteCartStore:
 
 
 @lru_cache(maxsize=1)
-def get_claude_client() -> ClaudeClient:
-    return ClaudeClient(api_key=get_settings().anthropic_api_key)
+def get_ai_client() -> OpenAIClient:
+    s = get_settings()
+    return OpenAIClient(api_key=s.openai_api_key, model=s.openai_model)
 
 
 @lru_cache(maxsize=1)
@@ -83,7 +84,7 @@ def get_meal_service() -> MealService:
         glucose_store=get_glucose_store(),
         cgm_service=get_cgm_service(),
         dexcom_service=get_dexcom_service(),
-        claude_client=get_claude_client(),
+        claude_client=get_ai_client(),
     )
 
 
@@ -94,6 +95,6 @@ def get_cart_service() -> CartService:
         cart_store=get_cart_store(),
         meal_store=get_meal_store(),
         meal_service=get_meal_service(),
-        claude_client=get_claude_client(),
+        claude_client=get_ai_client(),
         instacart_client=get_instacart_client(),
     )

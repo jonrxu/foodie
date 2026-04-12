@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from app.api.errors import AppError
-from app.clients.claude_client import ClaudeClient
+from app.clients.openai_client import OpenAIClient
 from app.clients.instacart_client import InstacartClient
 from app.config.settings import Settings
 from app.persistence.cart_store import SQLiteCartStore, StoredCartDraft

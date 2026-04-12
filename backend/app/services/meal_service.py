@@ -19,7 +19,7 @@ from app.schemas.meals import (
     SpikeEventPayload,
     SpikeMetricsPayload,
 )
-from app.clients.claude_client import ClaudeClient
+from app.clients.openai_client import OpenAIClient
 from app.services.cgm_service import CGMService
 from app.services.dexcom_service import DexcomService
 
