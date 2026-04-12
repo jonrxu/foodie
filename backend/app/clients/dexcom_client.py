@@ -124,9 +124,13 @@ class DexcomApiClient:
             )
 
         if response.status_code >= 400:
+            try:
+                body = response.json()
+            except Exception:
+                body = response.text
             raise AppError(
                 code="dexcom_request_failed",
-                message=f"Dexcom request failed with status {response.status_code}",
+                message=f"Dexcom request failed with status {response.status_code}: {body}",
                 status_code=502,
             )
 
