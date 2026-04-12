@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     dexcom_mock_oauth: bool = True
 
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5.4"
     instacart_api_key: str = ""
     instacart_mcp_url: str = "https://mcp.dev.instacart.tools/mcp"
 
