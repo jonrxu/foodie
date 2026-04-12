@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UIKit
 
 @MainActor
 final class PrototypeMealFlowViewModel: ObservableObject {
@@ -11,6 +12,7 @@ final class PrototypeMealFlowViewModel: ObservableObject {
 
     @Published private(set) var latestMealLog: MealLog?
     @Published private(set) var latestInsight: MealInsightContext?
+    @Published private(set) var capturedMealImage: UIImage?
     @Published private(set) var activeCartDraft: CartDraft?
     @Published private(set) var isLoggingMeal = false
     @Published private(set) var isCreatingCart = false
@@ -104,12 +106,16 @@ final class PrototypeMealFlowViewModel: ObservableObject {
         switch input {
         case .text(let text):
             summary = text
+            capturedMealImage = nil
         case .voice(let transcript):
             summary = transcript
+            capturedMealImage = nil
         case .barcode(let code):
             summary = (try? await backendClient.lookupBarcode(code: code)) ?? "Scanned product"
+            capturedMealImage = nil
         case .photo(let data, let mimeType):
             summary = (try? await backendClient.analyzePhoto(data, mimeType: mimeType)) ?? "Photo meal"
+            capturedMealImage = UIImage(data: data)
         }
 
         let mealLog = MealLog(

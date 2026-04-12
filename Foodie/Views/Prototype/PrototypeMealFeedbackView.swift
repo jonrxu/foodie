@@ -64,30 +64,42 @@ struct PrototypeMealFeedbackView: View {
 
     private var mealCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let imageName = currentInsight?.mealImageName {
-                Image(imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 214)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(alignment: .topTrailing) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .fill(Color.white.opacity(0.92))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(AppTheme.primary)
-                        }
-                        .padding(8)
-                    }
-            }
+            mealImage
 
             Text(currentInsight?.mealLog.summary ?? "No meal logged yet")
                 .font(.subheadline)
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var mealImage: some View {
+        let cameraOverlay = ZStack {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color.white.opacity(0.92))
+                .frame(width: 30, height: 30)
+            Image(systemName: "camera.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppTheme.primary)
+        }
+        .padding(8)
+
+        if let imageName = currentInsight?.mealImageName {
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 214)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topTrailing) { cameraOverlay }
+        } else if let captured = mealFlowViewModel.capturedMealImage {
+            Image(uiImage: captured)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 214, height: 160)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topTrailing) { cameraOverlay }
+        }
     }
 
     private var trendCard: some View {
