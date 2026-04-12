@@ -30,6 +30,7 @@ class MealTemplate:
     suggestion_image_name: str | None
     suggested_swap: str
     cart_items: list[CartItemPayload]
+    coach_message: str | None = None
 
 
 class MealService:
@@ -182,7 +183,7 @@ class MealService:
             mode="measured",
             headline="Feedback on your meal",
             summary=self._measured_summary(delta),
-            coachMessage=self._measured_coach_message(delta),
+            coachMessage=template.coach_message or self._measured_coach_message(delta),
             suggestedSwap=template.suggested_swap,
             linkedSpikeEventID=spike_id,
             suggestedCartItems=[item.name for item in template.cart_items],
@@ -261,7 +262,7 @@ class MealService:
             mode="predicted",
             headline="Feedback on your meal",
             summary=self._predicted_summary(delta),
-            coachMessage=self._predicted_coach_message(delta),
+            coachMessage=template.coach_message or self._predicted_coach_message(delta),
             suggestedSwap=template.suggested_swap,
             linkedSpikeEventID=spike_id,
             suggestedCartItems=[item.name for item in template.cart_items],
@@ -309,6 +310,7 @@ class MealService:
                 suggestion_image_name="chickenandsalad",
                 suggested_swap=result.suggested_swap,
                 cart_items=result.cart_items,
+                coach_message=result.coach_message,
             )
         return self._static_template_for(meal.summary)
 

@@ -14,6 +14,7 @@ _MEAL_ANALYSIS_SYSTEM = """You are a diabetes nutrition coach. Given a meal, res
 Schema:
 {
   "summary": "clean 3-6 word meal description",
+  "coachMessage": "2-3 sentence personalized coaching message about this specific meal and how it may affect blood glucose",
   "suggestedSwap": "one specific food swap to reduce glucose spike",
   "nutrition": {
     "totals": {
@@ -50,6 +51,7 @@ class MealAnalysisResult:
     suggested_swap: str
     cart_items: list[CartItemPayload] = field(default_factory=list)
     nutrition: dict | None = None
+    coach_message: str | None = None
 
 
 @dataclass
@@ -181,6 +183,7 @@ class OpenAIClient:
                 suggested_swap=data.get("suggestedSwap", "Try adding more vegetables"),
                 cart_items=items,
                 nutrition=data.get("nutrition"),
+                coach_message=data.get("coachMessage"),
             )
         except Exception:
             return self._fallback_analysis(fallback_summary)
