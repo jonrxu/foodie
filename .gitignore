@@ -104,6 +104,7 @@ __pycache__/
 .venv/
 .venv-test/
 backend/data/
+*.egg-info/
 
 # Secrets — never commit real keys
 backend/.env
