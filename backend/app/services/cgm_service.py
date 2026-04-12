@@ -94,8 +94,11 @@ class CGMService:
         if not readings:
             connection = self.dexcom_service.get_record(user_id)
             if connection.status == "connected":
-                self.sync_recent_glucose(user_id)
-                readings = self._load_window(user_id=user_id, start=start, end=end)
+                try:
+                    self.sync_recent_glucose(user_id)
+                    readings = self._load_window(user_id=user_id, start=start, end=end)
+                except Exception:
+                    pass
 
         average = None
         time_in_range = None
