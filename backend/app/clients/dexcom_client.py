@@ -99,9 +99,10 @@ class DexcomApiClient:
         return readings
 
     def _get(self, path: str, access_token: str, params: dict[str, str]) -> httpx.Response:
+        base = str(self.settings.dexcom_api_base).rstrip("/")
         try:
             response = httpx.get(
-                f"{self.settings.dexcom_api_base}{path}",
+                f"{base}{path}",
                 headers={
                     "Authorization": f"Bearer {access_token}",
                     "Accept": "application/json",
