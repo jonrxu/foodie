@@ -59,6 +59,22 @@ async def trigger_dexcom_sync(
     return DexcomSyncResponse(status="completed", synced_at=result.synced_at)
 
 
+@router.get("/debug/record")
+async def debug_dexcom_record(
+    user_id: str = Depends(get_current_user_id),
+    service: DexcomService = Depends(get_dexcom_service),
+) -> dict:
+    record = service.store.get(user_id)
+    return {
+        "user_id": user_id,
+        "status": record.status,
+        "has_access_token": record.access_token is not None,
+        "has_refresh_token": record.refresh_token is not None,
+        "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+        "connected_at": record.connected_at.isoformat() if record.connected_at else None,
+    }
+
+
 @router.post("/connect/mock-complete", response_model=DexcomConnectionStatusResponse)
 async def mock_complete_connection(
     user_id: str = Depends(get_current_user_id),
