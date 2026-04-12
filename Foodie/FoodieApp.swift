@@ -10,7 +10,6 @@ import SwiftUI
 @main
 struct FoodieApp: App {
     @StateObject private var session = AppSession.shared
-    @StateObject private var preferences = UserPreferences.shared
     @StateObject private var dexcomViewModel = DexcomConnectionViewModel.shared
     @StateObject private var mealFlowViewModel = PrototypeMealFlowViewModel.shared
 
@@ -18,7 +17,6 @@ struct FoodieApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(session)
-                .environmentObject(preferences)
                 .environmentObject(dexcomViewModel)
                 .environmentObject(mealFlowViewModel)
                 .task {
