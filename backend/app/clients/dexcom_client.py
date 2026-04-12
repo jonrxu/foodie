@@ -184,7 +184,7 @@ class DexcomApiClient:
 
     @staticmethod
     def _format_dexcom_datetime(value: datetime) -> str:
-        return value.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S")
 
     @staticmethod
     def _parse_dexcom_datetime(value: str) -> datetime:
