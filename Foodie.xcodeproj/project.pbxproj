@@ -427,7 +427,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Foodie/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Bites;
+				INFOPLIST_KEY_CFBundleDisplayName = Foodie;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To snapshot meals for quick logging.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "To help hand off grocery orders using your local store.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app uses the microphone to record voice notes.";
@@ -463,7 +463,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Foodie/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Bites;
+				INFOPLIST_KEY_CFBundleDisplayName = Foodie;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To snapshot meals for quick logging.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "To help hand off grocery orders using your local store.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app uses the microphone to record voice notes.";
