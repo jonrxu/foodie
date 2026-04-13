@@ -14,6 +14,7 @@ struct WeeklyGlucoseOverviewMockView: View {
     private let cgmStatusLabel: String?
     private let errorMessage: String?
     private let isSyncing: Bool
+    private let hideTabBar: Bool
     private let onSync: (() -> Void)?
     let onPlanMealsForNextWeek: (() -> Void)?
 
@@ -21,12 +22,14 @@ struct WeeklyGlucoseOverviewMockView: View {
          cgmStatusLabel: String? = nil,
          errorMessage: String? = nil,
          isSyncing: Bool = false,
+         hideTabBar: Bool = true,
          onSync: (() -> Void)? = nil,
          onPlanMealsForNextWeek: (() -> Void)? = nil) {
         self.summary = summary
         self.cgmStatusLabel = cgmStatusLabel
         self.errorMessage = errorMessage
         self.isSyncing = isSyncing
+        self.hideTabBar = hideTabBar
         self.onSync = onSync
         self.onPlanMealsForNextWeek = onPlanMealsForNextWeek
     }
@@ -77,14 +80,12 @@ struct WeeklyGlucoseOverviewMockView: View {
                         summaryCard
                         Spacer(minLength: 14)
                         trendCard
-                        Spacer(minLength: 18)
+                        Spacer(minLength: 0)
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
                         dismiss()
                     }
-
-                    planMealsButton
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 20)
@@ -94,7 +95,7 @@ struct WeeklyGlucoseOverviewMockView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .mockupsFullscreen()
+        .modifier(PrototypeTabBarVisibilityModifier(hideTabBar: hideTabBar))
         .navigationBarBackButtonHidden(true)
     }
 
@@ -215,28 +216,6 @@ struct WeeklyGlucoseOverviewMockView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color.blue.opacity(0.12), lineWidth: 1)
         )
-    }
-
-    private var planMealsButton: some View {
-        HStack {
-            Spacer()
-            Button {
-                if let onPlanMealsForNextWeek {
-                    onPlanMealsForNextWeek()
-                } else {
-                    dismiss()
-                }
-            } label: {
-                Text("Plan my meals for next week")
-                    .font(.headline.weight(.semibold))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 11)
-                    .foregroundStyle(.white)
-                    .background(AppTheme.primary)
-                    .clipShape(Capsule())
-            }
-            Spacer()
-        }
     }
 
     private var pageBackground: some View {

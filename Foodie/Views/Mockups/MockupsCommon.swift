@@ -115,3 +115,15 @@ extension View {
     }
 }
 
+struct PrototypeTabBarVisibilityModifier: ViewModifier {
+    let hideTabBar: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if hideTabBar {
+            content.mockupsFullscreen()
+        } else {
+            content
+        }
+    }
+}

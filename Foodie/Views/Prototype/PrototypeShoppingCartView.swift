@@ -10,8 +10,14 @@ struct PrototypeShoppingCartView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var mealFlowViewModel: PrototypeMealFlowViewModel
 
+    let hideTabBar: Bool
+
     @State private var showInstacartCheckout = false
     @State private var isHandingOffToCheckout = false
+
+    init(hideTabBar: Bool = true) {
+        self.hideTabBar = hideTabBar
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -40,7 +46,7 @@ struct PrototypeShoppingCartView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .mockupsFullscreen()
+        .modifier(PrototypeTabBarVisibilityModifier(hideTabBar: hideTabBar))
         .navigationBarBackButtonHidden(true)
         .navigationDestination(isPresented: $showInstacartCheckout) {
             InstacartCheckoutMockView()
@@ -53,10 +59,10 @@ struct PrototypeShoppingCartView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Your shopping cart")
-                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .font(.system(size: 33, weight: .bold, design: .rounded))
 
             Text(headerSubtitle)
-                .font(.title3.weight(.semibold))
+                .font(.headline.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -66,7 +72,7 @@ struct PrototypeShoppingCartView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Items")
-                    .font(.title3.weight(.bold))
+                    .font(.headline.weight(.semibold))
                 Spacer()
                 Label("Customize", systemImage: "square.and.pencil")
                     .font(.footnote.weight(.semibold))
@@ -128,7 +134,7 @@ struct PrototypeShoppingCartView: View {
                                 .tint(.white)
                         }
                         Text((mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout) ? "Preparing..." : "Order on Instacart")
-                            .font(.title3.weight(.semibold))
+                            .font(.headline.weight(.semibold))
                     }
                     .padding(.horizontal, 26)
                     .padding(.vertical, 12)
@@ -245,16 +251,16 @@ private struct PrototypeCartRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                    .font(.title3.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                 Text(item.detail)
-                    .font(.body)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
             Text(item.tag)
-                .font(.subheadline.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(item.color)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
