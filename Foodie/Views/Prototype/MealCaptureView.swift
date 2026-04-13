@@ -36,6 +36,7 @@ struct TextMealInputView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
+    @State private var isAnalyzing = false
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -82,18 +83,25 @@ struct TextMealInputView: View {
 
                         Button {
                             guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                            isAnalyzing = true
                             onComplete(.text(text.trimmingCharacters(in: .whitespacesAndNewlines)))
                         } label: {
-                            Text("Log meal")
-                                .font(.headline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.3) : AppTheme.primary)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
+                            HStack(spacing: 8) {
+                                if isAnalyzing {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(isAnalyzing ? "Analyzing..." : "Log meal")
+                                    .font(.headline.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.3) : AppTheme.primary)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAnalyzing)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -202,6 +210,7 @@ struct VoiceMealInputView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var recorder = SpeechRecorder()
+    @State private var isAnalyzing = false
 
     var body: some View {
         GeometryReader { geo in
@@ -284,18 +293,25 @@ struct VoiceMealInputView: View {
                         Button {
                             recorder.stopRecording()
                             let final = recorder.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                            isAnalyzing = true
                             onComplete(.voice(final.isEmpty ? "Voice meal" : final))
                         } label: {
-                            Text("Log meal")
-                                .font(.headline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(recorder.transcript.isEmpty ? Color.gray.opacity(0.3) : AppTheme.primary)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
+                            HStack(spacing: 8) {
+                                if isAnalyzing {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(isAnalyzing ? "Analyzing..." : "Log meal")
+                                    .font(.headline.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(recorder.transcript.isEmpty ? Color.gray.opacity(0.3) : AppTheme.primary)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .disabled(recorder.transcript.isEmpty && !recorder.isRecording)
+                        .disabled((recorder.transcript.isEmpty && !recorder.isRecording) || isAnalyzing)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -539,6 +555,7 @@ struct BarcodeMealInputView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var scannedCode: String?
     @State private var showScanner = false
+    @State private var isAnalyzing = false
 
     var body: some View {
         GeometryReader { geo in
@@ -606,18 +623,25 @@ struct BarcodeMealInputView: View {
 
                         Button {
                             guard let code = scannedCode else { return }
+                            isAnalyzing = true
                             onComplete(.barcode(code))
                         } label: {
-                            Text("Log meal")
-                                .font(.headline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(scannedCode == nil ? Color.gray.opacity(0.3) : AppTheme.primary)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
+                            HStack(spacing: 8) {
+                                if isAnalyzing {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(isAnalyzing ? "Analyzing..." : "Log meal")
+                                    .font(.headline.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(scannedCode == nil ? Color.gray.opacity(0.3) : AppTheme.primary)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .disabled(scannedCode == nil)
+                        .disabled(scannedCode == nil || isAnalyzing)
                     }
                 }
                 .padding(.horizontal, 20)
