@@ -289,12 +289,20 @@ class MealService:
             suggestedCartItems=template.cart_items,
         )
 
-    def analyze_photo(self, image_base64: str, mime_type: str) -> tuple[str, str | None]:
-        """Returns (summary, serving_size)."""
+    def analyze_photo(self, image_base64: str, mime_type: str) -> tuple[str, str | None, int | None]:
+        """Returns (summary, serving_size, calories)."""
         if self.claude_client:
             result = self.claude_client.analyze_meal_image(image_base64, mime_type)
-            return result.summary, result.serving_size
-        return "Photo meal", None
+            calories: int | None = None
+            if result.nutrition:
+                raw = result.nutrition.get("totals", {}).get("calories")
+                if raw is not None:
+                    try:
+                        calories = int(raw)
+                    except (TypeError, ValueError):
+                        pass
+            return result.summary, result.serving_size, calories
+        return "Photo meal", None, None
 
     def lookup_barcode(self, code: str) -> str:
         try:

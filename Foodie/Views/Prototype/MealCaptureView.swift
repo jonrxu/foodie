@@ -62,6 +62,34 @@ private struct ServingSizeField: View {
     }
 }
 
+// MARK: - Photo detail field (food item / quantity / calories)
+
+private struct PhotoDetailField: View {
+    let icon: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundStyle(.secondary)
+                .font(.subheadline.weight(.medium))
+                .frame(width: 18)
+            TextField(placeholder, text: $text)
+                .font(.body)
+                .keyboardType(keyboardType)
+        }
+        .padding(14)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.blue.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Text
 
 struct TextMealInputView: View {
@@ -390,7 +418,9 @@ struct PhotoMealInputView: View {
     @State private var selectedImage: UIImage?
     @State private var isAnalyzing = false
     @State private var showCamera = false
+    @State private var foodItem = ""
     @State private var servingSize = ""
+    @State private var caloriesText = ""
     @State private var isPreAnalyzing = false
     @State private var analyzedSummary: String? = nil
 
@@ -416,7 +446,7 @@ struct PhotoMealInputView: View {
                                 .resizable()
                                 .scaledToFill()
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 220)
+                                .frame(height: 180)
                                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
                             HStack(spacing: 10) {
@@ -492,8 +522,48 @@ struct PhotoMealInputView: View {
                     }
 
                     if selectedImage != nil {
-                        ServingSizeField(servingSize: $servingSize, isLoading: isPreAnalyzing)
+                        if isPreAnalyzing {
+                            HStack(spacing: 10) {
+                                Image(systemName: "sparkles")
+                                    .foregroundStyle(AppTheme.primary)
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Analyzing your photo…")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                ProgressView().scaleEffect(0.8)
+                            }
+                            .padding(14)
+                            .background(.white.opacity(0.96))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.blue.opacity(0.18), lineWidth: 1)
+                            )
                             .padding(.top, 4)
+                        } else {
+                            VStack(spacing: 10) {
+                                PhotoDetailField(
+                                    icon: "fork.knife",
+                                    placeholder: "Food item",
+                                    text: $foodItem
+                                )
+                                HStack(spacing: 10) {
+                                    PhotoDetailField(
+                                        icon: "scalemass",
+                                        placeholder: "Quantity",
+                                        text: $servingSize
+                                    )
+                                    PhotoDetailField(
+                                        icon: "flame",
+                                        placeholder: "Calories",
+                                        text: $caloriesText,
+                                        keyboardType: .numberPad
+                                    )
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
                     }
 
                     Spacer(minLength: 20)
@@ -514,7 +584,7 @@ struct PhotoMealInputView: View {
                             guard let image = selectedImage,
                                   let data = image.jpegData(compressionQuality: 0.8) else { return }
                             isAnalyzing = true
-                            onComplete(.photo(data, "image/jpeg", preAnalyzedSummary: analyzedSummary), servingSize.nilIfEmpty)
+                            onComplete(.photo(data, "image/jpeg", preAnalyzedSummary: foodItem.nilIfEmpty ?? analyzedSummary), servingSize.nilIfEmpty)
                         } label: {
                             HStack(spacing: 8) {
                                 if isAnalyzing {
@@ -556,11 +626,18 @@ struct PhotoMealInputView: View {
 
     private func runPhotoPreAnalysis(imageData: Data) async {
         isPreAnalyzing = true
+        foodItem = ""
+        servingSize = ""
+        caloriesText = ""
         analyzedSummary = nil
         if let result = try? await BackendClient.shared.analyzePhoto(imageData) {
             analyzedSummary = result.summary
-            if servingSize.isEmpty, let aiServing = result.servingSize {
+            foodItem = result.summary
+            if let aiServing = result.servingSize {
                 servingSize = aiServing
+            }
+            if let cal = result.calories {
+                caloriesText = "\(cal)"
             }
         }
         isPreAnalyzing = false
