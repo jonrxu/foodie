@@ -84,6 +84,7 @@ final class BackendClient {
 
     struct AnalyzePhotoResponse: Decodable {
         let summary: String
+        let servingSize: String?
     }
 
     struct LookupBarcodeResponse: Decodable {
@@ -383,17 +384,17 @@ final class BackendClient {
         }
     }
 
-    func analyzePhoto(_ imageData: Data, mimeType: String = "image/jpeg") async throws -> String {
+    func analyzePhoto(_ imageData: Data, mimeType: String = "image/jpeg") async throws -> (summary: String, servingSize: String?) {
         switch environment.mode {
         case .stub:
-            return "Photo meal"
+            return ("Photo meal", nil)
         case .remote(let baseURL):
             let response: AnalyzePhotoResponse = try await post(
                 path: "/meals/analyze-photo",
                 body: AnalyzePhotoRequest(imageBase64: imageData.base64EncodedString(), mimeType: mimeType),
                 to: baseURL
             )
-            return response.summary
+            return (response.summary, response.servingSize)
         }
     }
 

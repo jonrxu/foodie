@@ -14,14 +14,17 @@ _MEAL_ANALYSIS_SYSTEM = """You are a diabetes nutrition coach. Given a meal, res
 Schema:
 {
   "summary": "clean 3-6 word meal description",
+  "servingSize": "estimated serving size, e.g. '1 cup', '2 slices', '1 medium bowl (approx. 300g)'",
   "coachMessage": "2-3 sentence personalized coaching message about this specific meal and how it may affect blood glucose",
   "suggestedSwap": "one specific food swap to reduce glucose spike",
   "nutrition": {
     "totals": {
+      "calories": 400,
       "carbohydrateGrams": 45,
       "addedSugarGrams": 5,
       "fiberGrams": 3,
-      "proteinGrams": 20
+      "proteinGrams": 20,
+      "fatGrams": 12
     }
   },
   "cartItems": [
@@ -29,7 +32,7 @@ Schema:
   ]
 }
 
-Estimate the nutrition totals for the full meal. Include 3-5 cart items that are healthier alternatives relevant to this meal."""
+Estimate the serving size and nutrition totals for the full meal as plated/consumed. For photo analysis, use visual cues (plate size, food density, portion depth) to estimate the serving. Include 3-5 cart items that are healthier alternatives relevant to this meal."""
 
 _WEEKLY_CART_SYSTEM = """You are a diabetes nutrition coach creating a personalized weekly grocery list.
 Respond with JSON only — no prose.
@@ -52,6 +55,7 @@ class MealAnalysisResult:
     cart_items: list[CartItemPayload] = field(default_factory=list)
     nutrition: dict | None = None
     coach_message: str | None = None
+    serving_size: str | None = None
 
 
 @dataclass
@@ -184,6 +188,7 @@ class OpenAIClient:
                 cart_items=items,
                 nutrition=data.get("nutrition"),
                 coach_message=data.get("coachMessage"),
+                serving_size=data.get("servingSize"),
             )
         except Exception:
             return self._fallback_analysis(fallback_summary)

@@ -6,6 +6,10 @@
 
 import SwiftUI
 
+extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
 extension Color {
     func darker(by percentage: CGFloat = 0.2) -> Color {
         var r: CGFloat = 0

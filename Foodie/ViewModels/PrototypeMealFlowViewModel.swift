@@ -95,7 +95,7 @@ final class PrototypeMealFlowViewModel: ObservableObject {
     }
 
     @discardableResult
-    func logMeal(input: MealInput) async -> Bool {
+    func logMeal(input: MealInput, servingSize: String? = nil) async -> Bool {
         isLoggingMeal = true
         defer { isLoggingMeal = false }
 
@@ -113,8 +113,12 @@ final class PrototypeMealFlowViewModel: ObservableObject {
         case .barcode(let code):
             summary = (try? await backendClient.lookupBarcode(code: code)) ?? "Scanned product"
             capturedMealImage = nil
-        case .photo(let data, let mimeType):
-            summary = (try? await backendClient.analyzePhoto(data, mimeType: mimeType)) ?? "Photo meal"
+        case .photo(let data, let mimeType, let preAnalyzedSummary):
+            if let preAnalyzedSummary, !preAnalyzedSummary.isEmpty {
+                summary = preAnalyzedSummary
+            } else {
+                summary = (try? await backendClient.analyzePhoto(data, mimeType: mimeType))?.summary ?? "Photo meal"
+            }
             capturedMealImage = UIImage(data: data)
         }
 
@@ -122,7 +126,8 @@ final class PrototypeMealFlowViewModel: ObservableObject {
             loggedAt: loggedAt,
             source: input.source,
             summary: summary,
-            rawInput: summary
+            rawInput: summary,
+            servingSize: servingSize?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         )
 
         do {

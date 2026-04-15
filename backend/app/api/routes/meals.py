@@ -18,6 +18,7 @@ class AnalyzePhotoRequest(BaseModel):
 
 class AnalyzePhotoResponse(BaseModel):
     summary: str
+    servingSize: str | None = None
 
 
 class LookupBarcodeResponse(BaseModel):
@@ -48,8 +49,8 @@ async def analyze_photo(
     user_id: str = Depends(get_current_user_id),
     service: MealService = Depends(get_meal_service),
 ) -> AnalyzePhotoResponse:
-    summary = service.analyze_photo(payload.imageBase64, payload.mimeType)
-    return AnalyzePhotoResponse(summary=summary)
+    summary, serving_size = service.analyze_photo(payload.imageBase64, payload.mimeType)
+    return AnalyzePhotoResponse(summary=summary, servingSize=serving_size)
 
 
 @router.get("/lookup-barcode", response_model=LookupBarcodeResponse)

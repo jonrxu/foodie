@@ -411,9 +411,9 @@ private struct PrototypeHomeView: View {
                 case .selectMeals:
                     DinnerMealSelectionMockView()
                 case .capture(let mode):
-                    MealCaptureView(mode: mode) { input in
+                    MealCaptureView(mode: mode) { input, servingSize in
                         Task {
-                            if await mealFlowViewModel.logMeal(input: input) {
+                            if await mealFlowViewModel.logMeal(input: input, servingSize: servingSize) {
                                 await MainActor.run {
                                     path.append(.plateFeedback)
                                 }

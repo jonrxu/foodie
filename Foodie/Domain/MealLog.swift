@@ -119,6 +119,7 @@ struct MealLog: Identifiable, Codable, Hashable {
     var notes: String?
     var assets: [MealAsset]
     var analysis: MealAnalysis?
+    var servingSize: String?
 
     init(id: UUID = UUID(),
          loggedAt: Date = Date(),
@@ -127,7 +128,8 @@ struct MealLog: Identifiable, Codable, Hashable {
          rawInput: String? = nil,
          notes: String? = nil,
          assets: [MealAsset] = [],
-         analysis: MealAnalysis? = nil) {
+         analysis: MealAnalysis? = nil,
+         servingSize: String? = nil) {
         self.id = id
         self.loggedAt = loggedAt
         self.source = source
@@ -136,6 +138,7 @@ struct MealLog: Identifiable, Codable, Hashable {
         self.notes = notes
         self.assets = assets
         self.analysis = analysis
+        self.servingSize = servingSize
     }
 }
 

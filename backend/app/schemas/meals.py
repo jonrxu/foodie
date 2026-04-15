@@ -16,6 +16,7 @@ class MealLogPayload(BaseModel):
     notes: str | None = None
     assets: list[dict[str, Any]] = Field(default_factory=list)
     analysis: dict[str, Any] | None = None
+    servingSize: str | None = None
 
 
 class RecentMealsResponse(BaseModel):

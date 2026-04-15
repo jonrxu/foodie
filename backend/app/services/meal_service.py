@@ -49,12 +49,20 @@ class MealService:
         self.claude_client = claude_client
 
     def create_meal(self, user_id: str, meal: MealLogPayload) -> MealLogPayload:
+        updates: dict = {}
         if self.claude_client and meal.analysis is None:
             result = self.claude_client.analyze_meal_text(meal.summary)
             analysis: dict = {"suggestedSwap": result.suggested_swap}
             if result.nutrition:
                 analysis["nutrition"] = result.nutrition
-            meal = meal.model_copy(update={"analysis": analysis})
+            if result.serving_size:
+                analysis["servingSize"] = result.serving_size
+            updates["analysis"] = analysis
+            # Only fill serving size from AI if the user didn't provide one
+            if result.serving_size and not meal.servingSize:
+                updates["servingSize"] = result.serving_size
+        if updates:
+            meal = meal.model_copy(update=updates)
         self.meal_store.upsert_meal(
             user_id=user_id,
             meal=StoredMealLog(
@@ -281,11 +289,12 @@ class MealService:
             suggestedCartItems=template.cart_items,
         )
 
-    def analyze_photo(self, image_base64: str, mime_type: str) -> str:
+    def analyze_photo(self, image_base64: str, mime_type: str) -> tuple[str, str | None]:
+        """Returns (summary, serving_size)."""
         if self.claude_client:
             result = self.claude_client.analyze_meal_image(image_base64, mime_type)
-            return result.summary
-        return "Photo meal"
+            return result.summary, result.serving_size
+        return "Photo meal", None
 
     def lookup_barcode(self, code: str) -> str:
         try:

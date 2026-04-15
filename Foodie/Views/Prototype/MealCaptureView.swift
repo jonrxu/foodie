@@ -13,7 +13,7 @@ import VisionKit
 
 struct MealCaptureView: View {
     let mode: FoodLoggingMode
-    let onComplete: (MealInput) -> Void
+    let onComplete: (MealInput, String?) -> Void
 
     var body: some View {
         switch mode {
@@ -29,13 +29,47 @@ struct MealCaptureView: View {
     }
 }
 
+// MARK: - Shared serving size field
+
+private struct ServingSizeField: View {
+    @Binding var servingSize: String
+    var isLoading: Bool = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "scalemass")
+                .foregroundStyle(.secondary)
+                .font(.subheadline.weight(.medium))
+            if isLoading {
+                Text("Estimating serving size…")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                ProgressView()
+                    .scaleEffect(0.8)
+            } else {
+                TextField("Serving size (e.g. 1 cup, 200g)", text: $servingSize)
+                    .font(.body)
+            }
+        }
+        .padding(14)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.blue.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Text
 
 struct TextMealInputView: View {
-    let onComplete: (MealInput) -> Void
+    let onComplete: (MealInput, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
+    @State private var servingSize = ""
     @State private var isAnalyzing = false
     @FocusState private var isFocused: Bool
 
@@ -55,17 +89,21 @@ struct TextMealInputView: View {
 
                     Spacer(minLength: 20)
 
-                    TextField("e.g. Grilled chicken, rice, salad", text: $text, axis: .vertical)
-                        .font(.body)
-                        .lineLimit(4...8)
-                        .focused($isFocused)
-                        .padding(14)
-                        .background(.white.opacity(0.96))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.blue.opacity(0.18), lineWidth: 1)
-                        )
+                    VStack(spacing: 12) {
+                        TextField("e.g. Grilled chicken, rice, salad", text: $text, axis: .vertical)
+                            .font(.body)
+                            .lineLimit(4...8)
+                            .focused($isFocused)
+                            .padding(14)
+                            .background(.white.opacity(0.96))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.blue.opacity(0.18), lineWidth: 1)
+                            )
+
+                        ServingSizeField(servingSize: $servingSize)
+                    }
 
                     Spacer(minLength: 20)
 
@@ -84,7 +122,7 @@ struct TextMealInputView: View {
                         Button {
                             guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                             isAnalyzing = true
-                            onComplete(.text(text.trimmingCharacters(in: .whitespacesAndNewlines)))
+                            onComplete(.text(text.trimmingCharacters(in: .whitespacesAndNewlines)), servingSize.nilIfEmpty)
                         } label: {
                             HStack(spacing: 8) {
                                 if isAnalyzing {
@@ -206,10 +244,11 @@ private final class SpeechRecorder: ObservableObject {
 }
 
 struct VoiceMealInputView: View {
-    let onComplete: (MealInput) -> Void
+    let onComplete: (MealInput, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var recorder = SpeechRecorder()
+    @State private var servingSize = ""
     @State private var isAnalyzing = false
 
     var body: some View {
@@ -273,6 +312,10 @@ struct VoiceMealInputView: View {
                                 .font(.caption)
                                 .foregroundStyle(.red)
                         }
+
+                        if !recorder.isRecording {
+                            ServingSizeField(servingSize: $servingSize)
+                        }
                     }
                     .frame(maxWidth: .infinity)
 
@@ -294,7 +337,7 @@ struct VoiceMealInputView: View {
                             recorder.stopRecording()
                             let final = recorder.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                             isAnalyzing = true
-                            onComplete(.voice(final.isEmpty ? "Voice meal" : final))
+                            onComplete(.voice(final.isEmpty ? "Voice meal" : final), servingSize.nilIfEmpty)
                         } label: {
                             HStack(spacing: 8) {
                                 if isAnalyzing {
@@ -340,13 +383,16 @@ struct VoiceMealInputView: View {
 // MARK: - Photo
 
 struct PhotoMealInputView: View {
-    let onComplete: (MealInput) -> Void
+    let onComplete: (MealInput, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
     @State private var isAnalyzing = false
     @State private var showCamera = false
+    @State private var servingSize = ""
+    @State private var isPreAnalyzing = false
+    @State private var analyzedSummary: String? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -440,8 +486,14 @@ struct PhotoMealInputView: View {
                             if let data = try? await newItem?.loadTransferable(type: Data.self),
                                let image = UIImage(data: data) {
                                 selectedImage = image
+                                await runPhotoPreAnalysis(imageData: data)
                             }
                         }
+                    }
+
+                    if selectedImage != nil {
+                        ServingSizeField(servingSize: $servingSize, isLoading: isPreAnalyzing)
+                            .padding(.top, 4)
                     }
 
                     Spacer(minLength: 20)
@@ -462,7 +514,7 @@ struct PhotoMealInputView: View {
                             guard let image = selectedImage,
                                   let data = image.jpegData(compressionQuality: 0.8) else { return }
                             isAnalyzing = true
-                            onComplete(.photo(data, "image/jpeg"))
+                            onComplete(.photo(data, "image/jpeg", preAnalyzedSummary: analyzedSummary), servingSize.nilIfEmpty)
                         } label: {
                             HStack(spacing: 8) {
                                 if isAnalyzing {
@@ -494,9 +546,24 @@ struct PhotoMealInputView: View {
             CameraPickerView { image in
                 selectedImage = image
                 showCamera = false
+                if let data = image.jpegData(compressionQuality: 0.8) {
+                    Task { await runPhotoPreAnalysis(imageData: data) }
+                }
             }
             .ignoresSafeArea()
         }
+    }
+
+    private func runPhotoPreAnalysis(imageData: Data) async {
+        isPreAnalyzing = true
+        analyzedSummary = nil
+        if let result = try? await BackendClient.shared.analyzePhoto(imageData) {
+            analyzedSummary = result.summary
+            if servingSize.isEmpty, let aiServing = result.servingSize {
+                servingSize = aiServing
+            }
+        }
+        isPreAnalyzing = false
     }
 
     private var pageBackground: some View {
@@ -550,12 +617,13 @@ private struct CameraPickerView: UIViewControllerRepresentable {
 // MARK: - Barcode
 
 struct BarcodeMealInputView: View {
-    let onComplete: (MealInput) -> Void
+    let onComplete: (MealInput, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var scannedCode: String?
     @State private var showScanner = false
     @State private var isAnalyzing = false
+    @State private var servingSize = ""
 
     var body: some View {
         GeometryReader { geo in
@@ -603,6 +671,8 @@ struct BarcodeMealInputView: View {
                                 Text("Scanned: \(code)")
                                     .font(.subheadline.weight(.semibold))
                             }
+
+                            ServingSizeField(servingSize: $servingSize)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -624,7 +694,7 @@ struct BarcodeMealInputView: View {
                         Button {
                             guard let code = scannedCode else { return }
                             isAnalyzing = true
-                            onComplete(.barcode(code))
+                            onComplete(.barcode(code), servingSize.nilIfEmpty)
                         } label: {
                             HStack(spacing: 8) {
                                 if isAnalyzing {

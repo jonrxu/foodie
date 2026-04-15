@@ -8,7 +8,7 @@ import Foundation
 enum MealInput {
     case text(String)
     case voice(String)
-    case photo(Data, String)   // data, mimeType
+    case photo(Data, String, preAnalyzedSummary: String?)  // data, mimeType, pre-analyzed summary
     case barcode(String)
 
     var source: MealLogSource {
