@@ -438,15 +438,12 @@ struct PhotoMealInputView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Spacer(minLength: 20)
-
                     VStack(spacing: 12) {
                         if let image = selectedImage {
                             Image(uiImage: image)
                                 .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 180)
+                                .scaledToFit()
+                                .frame(maxWidth: .infinity, maxHeight: 260)
                                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
                             HStack(spacing: 10) {
@@ -511,6 +508,7 @@ struct PhotoMealInputView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(.top, 20)
                     .onChange(of: selectedItem) { _, newItem in
                         Task {
                             if let data = try? await newItem?.loadTransferable(type: Data.self),

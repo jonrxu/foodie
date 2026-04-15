@@ -14,7 +14,7 @@ _MEAL_ANALYSIS_SYSTEM = """You are a diabetes nutrition coach. Given a meal, res
 Schema:
 {
   "summary": "clean 3-6 word meal description",
-  "servingSize": "estimated serving size, e.g. '1 cup', '2 slices', '1 medium bowl (approx. 300g)'",
+  "servingSize": "short quantity only, e.g. '2 pieces', '1 cup', '300g', '1 bowl' — no descriptions",
   "coachMessage": "2-3 sentence personalized coaching message about this specific meal and how it may affect blood glucose",
   "suggestedSwap": "one specific food swap to reduce glucose spike",
   "nutrition": {
