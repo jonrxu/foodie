@@ -101,57 +101,64 @@ struct PrototypeShoppingCartView: View {
         )
     }
 
+    // Instacart brand colors (dark theme)
+    private let instacartGreen = Color(red: 0 / 255, green: 61 / 255, blue: 41 / 255)       // #003D29
+    private let instacartCashew = Color(red: 250 / 255, green: 241 / 255, blue: 229 / 255)  // #FAF1E5
+
     private var orderButton: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Spacer()
-                Button {
-                    Task {
-                        guard !isHandingOffToCheckout else { return }
+        let isLoading = mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout
+        let isDisabled = mealFlowViewModel.activeCartDraft == nil || isLoading
+
+        return HStack {
+            Spacer()
+            Button {
+                Task {
+                    guard !isHandingOffToCheckout else { return }
+                    await MainActor.run { isHandingOffToCheckout = true }
+                    let didPrepare = await mealFlowViewModel.prepareCheckout()
+                    if didPrepare {
+                        try? await Task.sleep(for: .milliseconds(450))
                         await MainActor.run {
-                            isHandingOffToCheckout = true
-                        }
-                        let didPrepare = await mealFlowViewModel.prepareCheckout()
-                        if didPrepare {
-                            try? await Task.sleep(for: .milliseconds(450))
-                            await MainActor.run {
-                                if let checkoutURL = mealFlowViewModel.activeCartDraft?.checkoutURL {
-                                    openURL(checkoutURL)
-                                } else {
-                                    showInstacartCheckout = true
-                                }
+                            if let checkoutURL = mealFlowViewModel.activeCartDraft?.checkoutURL {
+                                openURL(checkoutURL)
+                            } else {
+                                showInstacartCheckout = true
                             }
                         }
-                        await MainActor.run {
-                            isHandingOffToCheckout = false
-                        }
                     }
-                } label: {
-                    HStack(spacing: 8) {
-                        if mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.white)
-                        }
-                        Text((mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout) ? "Preparing..." : "Order on Instacart")
-                            .font(.headline.weight(.semibold))
-                    }
-                    .padding(.horizontal, 26)
-                    .padding(.vertical, 12)
-                    .foregroundStyle(.white)
-                    .background(AppTheme.primary)
-                    .clipShape(Capsule())
+                    await MainActor.run { isHandingOffToCheckout = false }
                 }
-                .buttonStyle(.plain)
-                .disabled(mealFlowViewModel.activeCartDraft == nil || mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout)
-                Spacer()
+            } label: {
+                HStack(spacing: 8) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(instacartCashew)
+                            .frame(width: 22, height: 22)
+                    } else {
+                        Image("instacart-carrot")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 22, height: 22)
+                    }
+                    Text(isLoading ? "Preparing..." : "Shop ingredients")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(instacartCashew)
+                    if !isLoading {
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(instacartCashew)
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .background(instacartGreen)
+                .clipShape(Capsule())
             }
-
-            if mealFlowViewModel.activeCartDraft?.checkoutURL != nil {
-                Text("Instacart handoff ready")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+            .buttonStyle(.plain)
+            .disabled(isDisabled)
+            .opacity(isDisabled ? 0.5 : 1)
+            Spacer()
         }
     }
 
