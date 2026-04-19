@@ -16,11 +16,11 @@ class Settings(BaseSettings):
     dexcom_client_id: str = "replace-me"
     dexcom_client_secret: str = "replace-me"
     dexcom_redirect_uri: str = "http://localhost:8000/dexcom/connect/callback"
-    dexcom_authorize_base: AnyHttpUrl = "https://sandbox-api.dexcom.com/v3/oauth2/login"
-    dexcom_token_url: AnyHttpUrl = "https://sandbox-api.dexcom.com/v3/oauth2/token"
-    dexcom_api_base: AnyHttpUrl = "https://sandbox-api.dexcom.com"
+    dexcom_authorize_base: AnyHttpUrl = "https://api.dexcom.com/v3/oauth2/login"
+    dexcom_token_url: AnyHttpUrl = "https://api.dexcom.com/v3/oauth2/token"
+    dexcom_api_base: AnyHttpUrl = "https://api.dexcom.com"
     dexcom_scope: str = "offline_access"
-    dexcom_mock_oauth: bool = True
+    dexcom_mock_oauth: bool = False
 
     openai_api_key: str = ""
     openai_model: str = "gpt-5.4"

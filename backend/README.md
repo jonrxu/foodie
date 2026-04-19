@@ -53,6 +53,14 @@ curl -s -X POST -H 'X-User-Id: demo-user' http://localhost:8000/dexcom/disconnec
 
 - Dexcom connection state and tokens now persist in a local SQLite file at `data/foodie_backend.sqlite3`.
 - OAuth callback now issues a redirect to the app deep link instead of returning JSON.
-- Real Dexcom token exchange is enabled when `DEXCOM_MOCK_OAUTH=false` and valid Dexcom client credentials are provided.
+- Production Dexcom is now the default path. Use valid production credentials with:
+  - `DEXCOM_CLIENT_ID`
+  - `DEXCOM_CLIENT_SECRET`
+  - `DEXCOM_REDIRECT_URI`
+- Sandbox is still available if you explicitly set:
+  - `DEXCOM_AUTHORIZE_BASE=https://sandbox-api.dexcom.com/v3/oauth2/login`
+  - `DEXCOM_TOKEN_URL=https://sandbox-api.dexcom.com/v3/oauth2/token`
+  - `DEXCOM_API_BASE=https://sandbox-api.dexcom.com`
+  - `DEXCOM_MOCK_OAUTH=true`
 - `POST /dexcom/sync` now pulls mock or real Dexcom glucose data and persists it to SQLite.
 - This is still prototype-grade persistence and should be replaced with Postgres-backed repositories before production use.

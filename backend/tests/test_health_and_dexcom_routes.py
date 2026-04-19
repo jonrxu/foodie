@@ -30,7 +30,7 @@ def test_start_status_callback_success_sync_disconnect_flow(client: TestClient) 
     assert start.status_code == 200
     start_payload = start.json()
     assert start_payload["connection_status"] == "pending"
-    assert "sandbox-api.dexcom.com" in start_payload["authorization_url"]
+    assert "api.dexcom.com" in start_payload["authorization_url"]
 
     status_pending = client.get("/dexcom/connect/status", headers={"X-User-Id": user})
     assert status_pending.status_code == 200
