@@ -437,7 +437,6 @@ private struct WeeklyGlucoseTrendChart: View {
             let mid = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
             path.addQuadCurve(to: mid, control: previous)
         }
-
         if let last = points.last, let secondLast = points.dropLast().last {
             path.addQuadCurve(to: last, control: secondLast)
         }

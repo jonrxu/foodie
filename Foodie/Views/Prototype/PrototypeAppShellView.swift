@@ -67,9 +67,14 @@ private struct PrototypeOnboardingFlowView: View {
                         stepIndex = 2
                     }
                 )
+            case 2:
+                PrototypeDexcomPairingStep(
+                    onBack: { stepIndex = 1 },
+                    onContinue: { stepIndex = 3 }
+                )
             default:
                 PrototypeSupportPreferencesStep(
-                    onBack: { stepIndex = 1 },
+                    onBack: { stepIndex = 2 },
                     onContinue: { supports in
                         onComplete(collectedDietPrefs, collectedCareGoals, supports)
                     }
@@ -80,9 +85,6 @@ private struct PrototypeOnboardingFlowView: View {
 }
 
 private struct PrototypeCareGoalsStep: View {
-    @Environment(\.openURL) private var openURL
-    @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
-
     let onBack: () -> Void
     let onContinue: ([String]) -> Void
 
@@ -106,7 +108,7 @@ private struct PrototypeCareGoalsStep: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Care goals")
                             .font(.system(size: 33, weight: .bold, design: .rounded))
-                        Text("Step 2 of 3 • Tell us your diabetes priorities")
+                        Text("Step 2 of 4 • Tell us your diabetes priorities")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
@@ -135,35 +137,6 @@ private struct PrototypeCareGoalsStep: View {
                                 )
                             }
                         }
-
-                        PrototypeDexcomConnectionCard(
-                            statusTitle: dexcomViewModel.statusTitle,
-                            statusDetail: dexcomViewModel.statusLabel,
-                            actionTitle: dexcomViewModel.actionTitle,
-                            isConnecting: dexcomViewModel.isConnecting,
-                            isSyncing: dexcomViewModel.isSyncing,
-                            isConnected: dexcomViewModel.connection.status == .connected,
-                            isPending: dexcomViewModel.connection.status == .pending,
-                            isCheckingStatus: dexcomViewModel.isLoadingStatus,
-                            errorMessage: dexcomViewModel.connection.status == .error ? dexcomViewModel.errorMessage : nil,
-                            onConnect: {
-                                Task {
-                                    if let authorizationURL = await dexcomViewModel.requestConnectionURL() {
-                                        openURL(authorizationURL)
-                                    }
-                                }
-                            },
-                            onSync: {
-                                Task {
-                                    await dexcomViewModel.syncAndLoadSummary()
-                                }
-                            },
-                            onCheckStatus: {
-                                Task {
-                                    await dexcomViewModel.refreshConnectionStatus()
-                                }
-                            }
-                        )
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Medication reminders")
@@ -227,6 +200,119 @@ private struct PrototypeCareGoalsStep: View {
         .toolbar(.hidden, for: .navigationBar)
         .mockupsFullscreen()
         .navigationBarBackButtonHidden(true)
+    }
+}
+
+private struct PrototypeDexcomPairingStep: View {
+    @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
+
+    let onBack: () -> Void
+    let onContinue: () -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                PrototypePageBackground()
+                    .ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Connect Dexcom")
+                            .font(.system(size: 33, weight: .bold, design: .rounded))
+                        Text("Step 3 of 4 • Pair your glucose data")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 14)
+
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Why connect Dexcom?")
+                                .font(.headline.weight(.semibold))
+                            Text("Foodie can use your glucose trends to give more personalized meal feedback and grocery suggestions")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        PrototypeDexcomConnectionCard(
+                            statusTitle: dexcomViewModel.statusTitle,
+                            statusDetail: dexcomViewModel.statusLabel,
+                            actionTitle: dexcomViewModel.actionTitle,
+                            isConnecting: dexcomViewModel.isConnecting,
+                            isSyncing: dexcomViewModel.isSyncing,
+                            isConnected: dexcomViewModel.connection.status == .connected,
+                            isPending: dexcomViewModel.connection.status == .pending,
+                            isCheckingStatus: dexcomViewModel.isLoadingStatus,
+                            errorMessage: dexcomViewModel.connection.status == .error ? dexcomViewModel.errorMessage : nil,
+                            onConnect: {
+                                Task {
+                                    if let authorizationURL = await dexcomViewModel.requestConnectionURL() {
+                                        openURL(authorizationURL)
+                                    }
+                                }
+                            },
+                            onSync: {
+                                Task {
+                                    await dexcomViewModel.syncAndLoadSummary()
+                                }
+                            },
+                            onCheckStatus: {
+                                Task {
+                                    await dexcomViewModel.refreshConnectionStatus()
+                                }
+                            }
+                        )
+
+                        Text("You can continue without Dexcom and connect it later from the app.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(16)
+                    .background(.white.opacity(0.96))
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.blue.opacity(0.12), lineWidth: 1)
+                    )
+
+                    Spacer(minLength: 16)
+
+                    HStack(spacing: 10) {
+                        Button(action: onBack) {
+                            Text("Back")
+                                .font(.headline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color(uiColor: .tertiarySystemFill))
+                                .foregroundStyle(.primary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: onContinue) {
+                            Text(dexcomViewModel.connection.status == .connected ? "Continue" : "Skip for now")
+                                .font(.headline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(AppTheme.primary)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 62)
+                .padding(.bottom, 24)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+            }
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .mockupsFullscreen()
+        .navigationBarBackButtonHidden(true)
         .task {
             await dexcomViewModel.bootstrapIfNeeded()
         }
@@ -256,7 +342,7 @@ private struct PrototypeSupportPreferencesStep: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Daily support")
                             .font(.system(size: 33, weight: .bold, design: .rounded))
-                        Text("Step 3 of 3 • Choose support you want")
+                        Text("Step 4 of 4 • Choose support you want")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }

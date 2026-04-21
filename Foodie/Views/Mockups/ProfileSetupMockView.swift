@@ -79,7 +79,7 @@ struct ProfileSetupMockView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Set up your profile")
                 .font(.system(size: 33, weight: .bold, design: .rounded))
-            Text("Step 1 of 3 • Tell us about your food habits")
+            Text("Step 1 of 4 • Tell us about your food habits")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }

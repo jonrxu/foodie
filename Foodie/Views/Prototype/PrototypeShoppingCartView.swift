@@ -14,6 +14,10 @@ struct PrototypeShoppingCartView: View {
 
     @State private var showInstacartCheckout = false
     @State private var isHandingOffToCheckout = false
+    @State private var showExpandedCart = false
+    @State private var cartScrollOffset: CGFloat = 0
+    @State private var cartContentHeight: CGFloat = 0
+    @State private var cartViewportHeight: CGFloat = 0
 
     init(hideTabBar: Bool = true) {
         self.hideTabBar = hideTabBar
@@ -51,6 +55,12 @@ struct PrototypeShoppingCartView: View {
         .navigationDestination(isPresented: $showInstacartCheckout) {
             InstacartCheckoutMockView()
         }
+        .sheet(isPresented: $showExpandedCart) {
+            PrototypeExpandedCartSheet(items: displayItems)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(26)
+        }
         .task {
             await mealFlowViewModel.bootstrapIfNeeded()
         }
@@ -69,36 +79,93 @@ struct PrototypeShoppingCartView: View {
     }
 
     private var cartCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Items")
-                    .font(.headline.weight(.semibold))
-                Spacer()
-                Label("Customize", systemImage: "square.and.pencil")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(AppTheme.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppTheme.primary.opacity(0.12))
-                    .clipShape(Capsule())
-            }
-            .padding(.bottom, 10)
+        Button(action: { showExpandedCart = true }) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Items")
+                        .font(.headline.weight(.semibold))
+                    Spacer()
+                    Label("Customize", systemImage: "square.and.pencil")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppTheme.primary.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+                .padding(.bottom, 10)
 
-            ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
-                PrototypeCartRow(item: item)
-                if index < displayItems.count - 1 {
-                    Divider()
-                        .padding(.leading, 54)
+                GeometryReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            GeometryReader { scrollProxy in
+                                Color.clear
+                                    .preference(
+                                        key: PrototypeCartScrollOffsetKey.self,
+                                        value: scrollProxy.frame(in: .named("cartScroll")).minY
+                                    )
+                            }
+                            .frame(height: 0)
+
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
+                                    PrototypeCartRow(item: item)
+                                    if index < displayItems.count - 1 {
+                                        Divider()
+                                            .padding(.leading, 54)
+                                    }
+                                }
+                            }
+                            .background(
+                                GeometryReader { contentProxy in
+                                    Color.clear
+                                        .preference(
+                                            key: PrototypeCartContentHeightKey.self,
+                                            value: contentProxy.size.height
+                                        )
+                                }
+                            )
+                        }
+                    }
+                    .coordinateSpace(name: "cartScroll")
+                    .onAppear {
+                        cartViewportHeight = proxy.size.height
+                    }
+                    .onChange(of: proxy.size.height) { newValue in
+                        cartViewportHeight = newValue
+                    }
+                    .onPreferenceChange(PrototypeCartScrollOffsetKey.self) { value in
+                        cartScrollOffset = value
+                    }
+                    .onPreferenceChange(PrototypeCartContentHeightKey.self) { value in
+                        cartContentHeight = value
+                    }
+                    .mask(cartViewportMask)
+                }
+                .frame(height: 400)
+
+                if displayItems.count > 4 {
+                    HStack {
+                        Spacer()
+                        Text("View full cart")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(AppTheme.primary)
+                        Image(systemName: "chevron.up")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.primary)
+                    }
+                    .padding(.top, 12)
                 }
             }
+            .padding(16)
+            .background(.white.opacity(0.96))
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.blue.opacity(0.12), lineWidth: 1)
+            )
         }
-        .padding(16)
-        .background(.white.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.blue.opacity(0.12), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
     }
 
     // Instacart brand colors (dark theme)
@@ -107,7 +174,7 @@ struct PrototypeShoppingCartView: View {
 
     private var orderButton: some View {
         let isLoading = mealFlowViewModel.isPreparingCheckout || isHandingOffToCheckout
-        let isDisabled = mealFlowViewModel.activeCartDraft == nil || isLoading
+        let isDisabled = isLoading
 
         return HStack {
             Spacer()
@@ -167,6 +234,27 @@ struct PrototypeShoppingCartView: View {
             return "Here are simple grocery swaps based on your latest meal and CGM pattern"
         }
         return "Here is your personal shopping list based on your food logs and CGM data this week"
+    }
+
+    private var shouldShowTopFade: Bool {
+        cartScrollOffset < -6
+    }
+
+    private var shouldShowBottomFade: Bool {
+        cartContentHeight > cartViewportHeight && (cartContentHeight + cartScrollOffset - cartViewportHeight) > 6
+    }
+
+    private var cartViewportMask: some View {
+        LinearGradient(
+            stops: [
+                .init(color: shouldShowTopFade ? .clear : .white, location: 0.0),
+                .init(color: .white, location: shouldShowTopFade ? 0.08 : 0.0),
+                .init(color: .white, location: shouldShowBottomFade ? 0.90 : 1.0),
+                .init(color: shouldShowBottomFade ? .clear : .white, location: 1.0)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 
     private var displayItems: [PrototypeCartDisplayItem] {
@@ -231,6 +319,45 @@ struct PrototypeShoppingCartView: View {
                 endRadius: 540
             )
         }
+    }
+}
+
+private struct PrototypeExpandedCartSheet: View {
+    let items: [PrototypeCartDisplayItem]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        PrototypeCartRow(item: item)
+                        if index < items.count - 1 {
+                            Divider()
+                                .padding(.leading, 54)
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("Cart items")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+private struct PrototypeCartScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct PrototypeCartContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
