@@ -8,8 +8,9 @@ from app.schemas.dexcom import (
     DexcomDisconnectResponse,
     DexcomSyncResponse,
 )
+from app.services.agent_service import AgentService
 from app.services.cgm_service import CGMService
-from app.services.container import get_cgm_service, get_dexcom_service
+from app.services.container import get_agent_service, get_cgm_service, get_dexcom_service
 from app.services.dexcom_service import DexcomService
 
 router = APIRouter(prefix="/dexcom", tags=["dexcom"])
@@ -54,8 +55,10 @@ async def disconnect_dexcom(
 async def trigger_dexcom_sync(
     user_id: str = Depends(get_current_user_id),
     service: CGMService = Depends(get_cgm_service),
+    agent_service: AgentService = Depends(get_agent_service),
 ) -> DexcomSyncResponse:
     result = service.sync_recent_glucose(user_id=user_id)
+    agent_service.process_recent_spikes(user_id=user_id)
     return DexcomSyncResponse(status="completed", synced_at=result.synced_at)
 
 

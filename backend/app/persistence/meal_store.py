@@ -84,6 +84,25 @@ class SQLiteMealStore:
             ).fetchall()
         return [self._row_to_meal(row) for row in rows]
 
+    def fetch_meals_between(self, user_id: str, start: datetime, end: datetime) -> list[StoredMealLog]:
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, logged_at, source, summary, payload_json
+                FROM meal_logs
+                WHERE user_id = ?
+                  AND logged_at >= ?
+                  AND logged_at <= ?
+                ORDER BY logged_at ASC
+                """,
+                (
+                    user_id,
+                    self._serialize_datetime(start),
+                    self._serialize_datetime(end),
+                ),
+            ).fetchall()
+        return [self._row_to_meal(row) for row in rows]
+
     def upsert_feedback(self, user_id: str, meal_log_id: UUID | str, created_at: datetime, payload: dict[str, Any]) -> None:
         self._upsert_json_record(
             table="meal_feedback",

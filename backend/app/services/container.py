@@ -8,7 +8,9 @@ from app.persistence.cart_store import SQLiteCartStore
 from app.persistence.dexcom_store import SQLiteDexcomConnectionStore
 from app.persistence.glucose_store import SQLiteGlucoseStore
 from app.persistence.meal_store import SQLiteMealStore
+from app.persistence.agent_store import SQLiteAgentStore
 from app.persistence.user_store import SQLiteUserStore
+from app.services.agent_service import AgentService
 from app.services.cart_service import CartService
 from app.services.cgm_service import CGMService
 from app.services.dexcom_service import DexcomService
@@ -44,6 +46,11 @@ def get_meal_store() -> SQLiteMealStore:
 @lru_cache(maxsize=1)
 def get_cart_store() -> SQLiteCartStore:
     return SQLiteCartStore(database_path=get_settings().backend_database_path)
+
+
+@lru_cache(maxsize=1)
+def get_agent_store() -> SQLiteAgentStore:
+    return SQLiteAgentStore(database_path=get_settings().backend_database_path)
 
 
 @lru_cache(maxsize=1)
@@ -97,4 +104,16 @@ def get_cart_service() -> CartService:
         meal_service=get_meal_service(),
         claude_client=get_ai_client(),
         instacart_client=get_instacart_client(),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_agent_service() -> AgentService:
+    return AgentService(
+        agent_store=get_agent_store(),
+        meal_store=get_meal_store(),
+        glucose_store=get_glucose_store(),
+        meal_service=get_meal_service(),
+        cart_service=get_cart_service(),
+        user_service=get_user_service(),
     )
