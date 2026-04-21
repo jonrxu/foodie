@@ -69,6 +69,17 @@ final class BackendClient {
         let draft: CartDraft?
     }
 
+    struct AgentFeedResponse: Codable {
+        let runs: [AgentRun]
+        let recommendations: [AgentRecommendation]
+    }
+
+    struct AgentRecommendationStateResponse: Codable {
+        let id: UUID
+        let readAt: Date?
+        let dismissedAt: Date?
+    }
+
     struct CartGenerationRequest: Encodable {
         let mealLogID: UUID?
     }
@@ -342,6 +353,52 @@ final class BackendClient {
             )
         case .remote(let baseURL):
             return try await get(path: "/meals/\(mealLogID.uuidString)/feedback", from: baseURL)
+        }
+    }
+
+    func fetchAgentFeed(limit: Int = 10) async throws -> AgentFeed {
+        switch environment.mode {
+        case .stub:
+            return AgentFeed(runs: [], recommendations: [])
+        case .remote(let baseURL):
+            var components = URLComponents(url: baseURL.appending(path: "/agent/feed"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+            guard let url = components?.url else {
+                throw BackendError.invalidResponse
+            }
+
+            var request = URLRequest(url: url)
+            configureHeaders(for: &request)
+            let (data, response) = try await session.data(for: request)
+            let decoded = try decode(AgentFeedResponse.self, from: data, response: response)
+            return AgentFeed(runs: decoded.runs, recommendations: decoded.recommendations)
+        }
+    }
+
+    func markAgentRecommendationRead(_ id: UUID) async throws -> AgentRecommendationStateResponse {
+        switch environment.mode {
+        case .stub:
+            return AgentRecommendationStateResponse(id: id, readAt: Date(), dismissedAt: nil)
+        case .remote(let baseURL):
+            return try await post(
+                path: "/agent/recommendations/\(id.uuidString)/read",
+                body: EmptyBody(),
+                to: baseURL
+            )
+        }
+    }
+
+    func dismissAgentRecommendation(_ id: UUID) async throws -> AgentRecommendationStateResponse {
+        switch environment.mode {
+        case .stub:
+            let now = Date()
+            return AgentRecommendationStateResponse(id: id, readAt: now, dismissedAt: now)
+        case .remote(let baseURL):
+            return try await post(
+                path: "/agent/recommendations/\(id.uuidString)/dismiss",
+                body: EmptyBody(),
+                to: baseURL
+            )
         }
     }
 

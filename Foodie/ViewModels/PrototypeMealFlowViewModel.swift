@@ -189,6 +189,24 @@ final class PrototypeMealFlowViewModel: ObservableObject {
         }
     }
 
+    func loadMealFeedback(mealLogID: UUID) async {
+        let readings = await loadAvailableReadings()
+
+        if let localMeals = try? await repositories.mealLogs.fetchAll(),
+           let meal = localMeals.first(where: { $0.id == mealLogID }) {
+            latestMealLog = meal
+            latestInsight = await loadInsight(for: meal, readings: readings)
+            return
+        }
+
+        if let remoteMeals = try? await backendClient.fetchRecentMeals(limit: 20),
+           let remoteMeal = remoteMeals.first(where: { $0.id == mealLogID }) {
+            try? await repositories.mealLogs.upsert(remoteMeal)
+            latestMealLog = remoteMeal
+            latestInsight = await loadInsight(for: remoteMeal, readings: readings)
+        }
+    }
+
     private func loadAvailableReadings() async -> [GlucoseReading] {
         if let cached = try? await repositories.glucose.fetchReadings(), !cached.isEmpty {
             return cached

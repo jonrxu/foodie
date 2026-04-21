@@ -431,6 +431,8 @@ private struct PrototypeSupportPreferencesStep: View {
 private struct PrototypeHomeView: View {
     @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
     @EnvironmentObject private var mealFlowViewModel: PrototypeMealFlowViewModel
+    @EnvironmentObject private var agentFeedViewModel: AgentFeedViewModel
+    @EnvironmentObject private var agentNotificationRouter: AgentNotificationRouter
 
     let onResetToOnboarding: () -> Void
 
@@ -449,6 +451,7 @@ private struct PrototypeHomeView: View {
     @State private var path: [Destination] = []
     @State private var selectedTab: HomeTab = .food
     @State private var showMealsSheet = false
+    @State private var showAgentInbox = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -456,6 +459,15 @@ private struct PrototypeHomeView: View {
                 PrototypeFoodLoggingTab(
                     onResetToOnboarding: onResetToOnboarding,
                     onShowMealsHistory: { showMealsSheet = true },
+                    onShowAgentInbox: { showAgentInbox = true },
+                    latestRecommendation: agentFeedViewModel.latestRecommendation,
+                    unreadCount: agentFeedViewModel.unreadCount,
+                    onOpenRecommendation: { recommendation in
+                        handleRecommendation(recommendation)
+                    },
+                    onDismissRecommendation: { recommendation in
+                        agentFeedViewModel.dismiss(recommendation)
+                    },
                     onSelectMeals: {
                         path.append(.selectMeals)
                     },
@@ -491,6 +503,19 @@ private struct PrototypeHomeView: View {
             .task {
                 await dexcomViewModel.bootstrapIfNeeded()
                 await mealFlowViewModel.bootstrapIfNeeded()
+                await agentFeedViewModel.bootstrapIfNeeded()
+                if let route = agentNotificationRouter.pendingRoute {
+                    handleNotificationRoute(route)
+                    agentNotificationRouter.consume()
+                }
+            }
+            .task(id: selectedTab) {
+                await agentFeedViewModel.refresh()
+            }
+            .onChange(of: agentNotificationRouter.pendingRoute) { route in
+                guard let route else { return }
+                handleNotificationRoute(route)
+                agentNotificationRouter.consume()
             }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
@@ -516,6 +541,62 @@ private struct PrototypeHomeView: View {
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(26)
             }
+            .sheet(isPresented: $showAgentInbox) {
+                PrototypeAgentInboxView(
+                    recommendations: agentFeedViewModel.visibleRecommendations,
+                    unreadIDs: agentFeedViewModel.unreadRecommendationIDs,
+                    isLoading: agentFeedViewModel.isLoading,
+                    errorMessage: agentFeedViewModel.errorMessage,
+                    onRefresh: {
+                        Task { await agentFeedViewModel.refresh() }
+                    },
+                    onOpenRecommendation: { recommendation in
+                        showAgentInbox = false
+                        handleRecommendation(recommendation)
+                    },
+                    onDismissRecommendation: { recommendation in
+                        agentFeedViewModel.dismiss(recommendation)
+                    }
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(26)
+            }
+        }
+    }
+
+    private func handleRecommendation(_ recommendation: AgentRecommendation) {
+        agentFeedViewModel.markRead(recommendation)
+        let route = AgentNotificationRoute(
+            targetPath: recommendation.notificationDraft?.targetPath ?? recommendation.actionTargetPath ?? "/food",
+            recommendationID: recommendation.id,
+            relatedMealLogID: recommendation.relatedMealLogID
+        )
+        handleNotificationRoute(route)
+    }
+
+    private func handleNotificationRoute(_ route: AgentNotificationRoute) {
+        if let recommendationID = route.recommendationID {
+            agentFeedViewModel.markRead(recommendationID: recommendationID)
+        }
+
+        switch route.targetPath {
+        case "/food":
+            selectedTab = .food
+        case "/cgm":
+            selectedTab = .cgm
+        case "/cart":
+            selectedTab = .cart
+        default:
+            if route.targetPath.hasPrefix("/meals/"), let mealID = route.relatedMealLogID {
+                selectedTab = .food
+                Task {
+                    await mealFlowViewModel.loadMealFeedback(mealLogID: mealID)
+                    await MainActor.run {
+                        path.append(.plateFeedback)
+                    }
+                }
+            }
         }
     }
 }
@@ -523,6 +604,11 @@ private struct PrototypeHomeView: View {
 private struct PrototypeFoodLoggingTab: View {
     let onResetToOnboarding: () -> Void
     let onShowMealsHistory: () -> Void
+    let onShowAgentInbox: () -> Void
+    let latestRecommendation: AgentRecommendation?
+    let unreadCount: Int
+    let onOpenRecommendation: (AgentRecommendation) -> Void
+    let onDismissRecommendation: (AgentRecommendation) -> Void
     let onSelectMeals: () -> Void
     let onCapture: (FoodLoggingMode) -> Void
 
@@ -548,22 +634,51 @@ private struct PrototypeFoodLoggingTab: View {
 
                         Spacer(minLength: 12)
 
-                        Button(action: onShowMealsHistory) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                Text("History")
+                        HStack(spacing: 8) {
+                            Button(action: onShowAgentInbox) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "bell.badge")
+                                    Text(unreadCount > 0 ? "Inbox \(unreadCount)" : "Inbox")
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color(uiColor: .tertiarySystemFill))
+                                .foregroundStyle(.primary)
+                                .clipShape(Capsule())
                             }
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(Color(uiColor: .tertiarySystemFill))
-                            .foregroundStyle(.primary)
-                            .clipShape(Capsule())
+                            .buttonStyle(.plain)
+
+                            Button(action: onShowMealsHistory) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                    Text("History")
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color(uiColor: .tertiarySystemFill))
+                                .foregroundStyle(.primary)
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     Spacer(minLength: 28)
+
+                    if let latestRecommendation {
+                        PrototypeAgentRecommendationBanner(
+                            recommendation: latestRecommendation,
+                            onDismiss: {
+                                onDismissRecommendation(latestRecommendation)
+                            },
+                            action: {
+                                onOpenRecommendation(latestRecommendation)
+                            }
+                        )
+                        .padding(.bottom, 18)
+                    }
 
                     LazyVGrid(
                         columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
@@ -603,6 +718,12 @@ private struct PrototypeFoodLoggingTab: View {
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
             }
         }
+    }
+}
+
+private extension AgentRecommendation {
+    var actionTargetPath: String? {
+        notificationDraft?.targetPath
     }
 }
 
@@ -1043,6 +1164,237 @@ private struct PrototypeEmptyMealHistoryCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.blue.opacity(0.12), lineWidth: 1)
         )
+    }
+}
+
+private struct PrototypeAgentRecommendationBanner: View {
+    let recommendation: AgentRecommendation
+    let onDismiss: () -> Void
+    let action: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppTheme.primary)
+                Text(recommendation.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .padding(8)
+                        .background(Color(uiColor: .tertiarySystemFill))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                Text(recommendation.runKind.bannerLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.primary.opacity(0.10))
+                    .clipShape(Capsule())
+            }
+
+            Text(recommendation.summary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let actionLabel = recommendation.actionLabel {
+                Button(action: action) {
+                    HStack(spacing: 6) {
+                        Text(actionLabel)
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.primary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(AppTheme.primary.opacity(0.14), lineWidth: 1)
+        )
+    }
+
+    private var iconName: String {
+        switch recommendation.notificationDraft?.kind {
+        case .logMealPrompt:
+            return "fork.knife.circle"
+        case .mealFeedbackReady:
+            return "sparkles"
+        case .dailySummaryReady:
+            return "sunrise"
+        case .weeklyPlanReady:
+            return "cart.badge.plus"
+        case .none:
+            return "bell.badge"
+        }
+    }
+}
+
+private struct PrototypeAgentInboxView: View {
+    let recommendations: [AgentRecommendation]
+    let unreadIDs: Set<UUID>
+    let isLoading: Bool
+    let errorMessage: String?
+    let onRefresh: () -> Void
+    let onOpenRecommendation: (AgentRecommendation) -> Void
+    let onDismissRecommendation: (AgentRecommendation) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                PrototypePageBackground()
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Agent inbox")
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                Text("Recent prompts, summaries, and weekly plans")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button(action: onRefresh) {
+                                if isLoading {
+                                    ProgressView()
+                                        .tint(AppTheme.primary)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.headline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.primary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        if let errorMessage, recommendations.isEmpty {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+
+                        if recommendations.isEmpty, !isLoading {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Nothing new yet")
+                                    .font(.headline.weight(.semibold))
+                                Text("Foodie will add prompts here after spikes, daily reviews, and weekly planning runs.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.96))
+                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        } else {
+                            ForEach(recommendations) { recommendation in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Button {
+                                            onOpenRecommendation(recommendation)
+                                        } label: {
+                                            VStack(alignment: .leading, spacing: 10) {
+                                                HStack(spacing: 8) {
+                                                    Text(recommendation.runKind.bannerLabel)
+                                                        .font(.caption.weight(.semibold))
+                                                        .foregroundStyle(AppTheme.primary)
+                                                        .padding(.horizontal, 10)
+                                                        .padding(.vertical, 6)
+                                                        .background(AppTheme.primary.opacity(0.10))
+                                                        .clipShape(Capsule())
+                                                    if unreadIDs.contains(recommendation.id) {
+                                                        Text("Unread")
+                                                            .font(.caption.weight(.semibold))
+                                                            .foregroundStyle(.white)
+                                                            .padding(.horizontal, 8)
+                                                            .padding(.vertical, 4)
+                                                            .background(AppTheme.primary)
+                                                            .clipShape(Capsule())
+                                                    }
+                                                    Spacer()
+                                                    Text(recommendation.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                }
+
+                                                Text(recommendation.title)
+                                                    .font(.headline.weight(.semibold))
+                                                    .foregroundStyle(.primary)
+                                                    .multilineTextAlignment(.leading)
+
+                                                Text(recommendation.summary)
+                                                    .font(.subheadline)
+                                                    .foregroundStyle(.secondary)
+                                                    .multilineTextAlignment(.leading)
+                                                    .fixedSize(horizontal: false, vertical: true)
+
+                                                if let actionLabel = recommendation.actionLabel {
+                                                    Text(actionLabel)
+                                                        .font(.subheadline.weight(.semibold))
+                                                        .foregroundStyle(AppTheme.primary)
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        Button(action: {
+                                            onDismissRecommendation(recommendation)
+                                        }) {
+                                            Image(systemName: "xmark")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(.secondary)
+                                                .padding(8)
+                                                .background(Color(uiColor: .tertiarySystemFill))
+                                                .clipShape(Circle())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(16)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.white.opacity(0.96))
+                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .stroke(AppTheme.primary.opacity(0.10), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 24)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+}
+
+private extension AgentRunKind {
+    var bannerLabel: String {
+        switch self {
+        case .spikeTriggered:
+            return "Spike"
+        case .dailySummary:
+            return "Daily"
+        case .weeklyPlanning:
+            return "Weekly"
+        }
     }
 }
 

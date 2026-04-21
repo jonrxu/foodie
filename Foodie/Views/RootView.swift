@@ -8,6 +8,7 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var dexcomViewModel: DexcomConnectionViewModel
+    @EnvironmentObject private var agentFeedViewModel: AgentFeedViewModel
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -16,6 +17,7 @@ struct RootView: View {
                 if newPhase == .active {
                     Task {
                         await dexcomViewModel.refreshConnectionStatus()
+                        await agentFeedViewModel.refresh()
                     }
                 }
             }
