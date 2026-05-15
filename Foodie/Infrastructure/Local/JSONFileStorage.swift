@@ -30,4 +30,10 @@ final class JSONFileStorage {
         guard let data = try? encoder.encode(value) else { return }
         try? data.write(to: fileURL, options: .atomic)
     }
+
+    func clear() throws {
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+        }
+    }
 }

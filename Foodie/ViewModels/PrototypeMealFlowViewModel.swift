@@ -207,6 +207,40 @@ final class PrototypeMealFlowViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func clearActiveCart() async -> Bool {
+        guard activeCartDraft != nil else { return false }
+        do {
+            try await repositories.carts.clearDrafts()
+            activeCartDraft = nil
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func reduceActiveCart(to limit: Int) async -> Bool {
+        guard limit > 0, var draft = activeCartDraft else { return false }
+        let normalizedLimit = min(limit, draft.items.count)
+        guard normalizedLimit < draft.items.count else { return false }
+
+        draft.items = Array(draft.items.prefix(normalizedLimit))
+        draft.updatedAt = Date()
+
+        do {
+            try await repositories.carts.saveDraft(draft)
+            activeCartDraft = draft
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     private func loadAvailableReadings() async -> [GlucoseReading] {
         if let cached = try? await repositories.glucose.fetchReadings(), !cached.isEmpty {
             return cached
