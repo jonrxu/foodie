@@ -128,7 +128,20 @@ class DexcomService:
                 status_code=400,
             )
 
-        token_payload = self._exchange_authorization_code(code)
+        try:
+            token_payload = self._exchange_authorization_code(code)
+        except AppError as exc:
+            record.status = "error"
+            record.error_message = exc.message
+            record.pending_state = None
+            record.pending_started_at = None
+            self.store.remove_state(state)
+            self.store.save(user_id, record)
+            return DexcomCallbackOutcome(
+                status="error",
+                redirect_to=f"{self.settings.app_deep_link_base}dexcom-connected?status=error",
+            )
+
         now = datetime.now(UTC)
         record.status = "connected"
         record.connected_at = now

@@ -2,8 +2,10 @@ from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
 
+from app.api.errors import AppError
 from app.main import app
 from app.services.container import get_dexcom_service, get_dexcom_store
+from app.services.dexcom_service import DexcomService
 
 
 def _extract_state(auth_url: str) -> str:
@@ -83,6 +85,36 @@ def test_callback_error_marks_connection_error_and_redirects(client: TestClient)
     assert status.status_code == 200
     assert status.json()["status"] == "error"
     assert "authorization failed" in status.json()["error_message"].lower()
+
+
+def test_token_exchange_failure_marks_connection_error_and_redirects(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    user = "user-token-error"
+    start = client.post("/dexcom/connect/start", headers={"X-User-Id": user})
+    state = _extract_state(start.json()["authorization_url"])
+
+    def fail_exchange(self: DexcomService, code: str) -> None:
+        raise AppError(
+            code="dexcom_token_exchange_failed",
+            message="Dexcom token exchange failed",
+            status_code=502,
+        )
+
+    monkeypatch.setattr(DexcomService, "_exchange_authorization_code", fail_exchange)
+
+    callback = client.get(
+        f"/dexcom/connect/callback?state={state}&code=fake-auth-code",
+        follow_redirects=False,
+    )
+    assert callback.status_code == 302
+    assert callback.headers["location"].startswith("foodie://dexcom-connected?status=error")
+
+    status = client.get("/dexcom/connect/status", headers={"X-User-Id": user})
+    assert status.status_code == 200
+    assert status.json()["status"] == "error"
+    assert status.json()["error_message"] == "Dexcom token exchange failed"
 
 
 def test_callback_invalid_state_returns_error_envelope(client: TestClient) -> None:
