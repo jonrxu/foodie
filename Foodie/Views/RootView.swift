@@ -258,8 +258,13 @@ private struct AuthenticationView: View {
 
                         if let errorMessage = authViewModel.errorMessage, errorMessage.isEmpty == false {
                             Text(errorMessage)
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(12)
+                                .background(Color.red.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .textSelection(.enabled)
                         }
 
                         Button {

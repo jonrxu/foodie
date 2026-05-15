@@ -718,8 +718,9 @@ final class SupabaseAuthClient {
 
     func signIn(email: String, password: String) async throws -> AuthSession {
         let response: SupabaseAuthResponse = try await request(
-            path: "/auth/v1/token?grant_type=password",
+            path: "/auth/v1/token",
             method: "POST",
+            queryItems: [URLQueryItem(name: "grant_type", value: "password")],
             body: SupabasePasswordSignInRequest(email: email, password: password)
         )
         guard let authSession = response.authSession else {
@@ -739,8 +740,9 @@ final class SupabaseAuthClient {
 
     func refreshSession(refreshToken: String) async throws -> AuthSession {
         let response: SupabaseAuthResponse = try await request(
-            path: "/auth/v1/token?grant_type=refresh_token",
+            path: "/auth/v1/token",
             method: "POST",
+            queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")],
             body: SupabaseRefreshTokenRequest(refreshToken: refreshToken)
         )
         guard let authSession = response.authSession else {
@@ -783,6 +785,7 @@ final class SupabaseAuthClient {
     private func request<Request: Encodable, Response: Decodable>(
         path: String,
         method: String,
+        queryItems: [URLQueryItem] = [],
         body: Request?,
         accessToken: String? = nil
     ) async throws -> Response {
@@ -793,7 +796,11 @@ final class SupabaseAuthClient {
             throw AuthError.notConfigured
         }
 
-        let url = baseURL.appending(path: path)
+        var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)
+        components?.queryItems = queryItems.isEmpty ? nil : queryItems
+        guard let url = components?.url else {
+            throw AuthError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -811,7 +818,17 @@ final class SupabaseAuthClient {
         }
         guard (200..<300).contains(http.statusCode) else {
             let decodedError = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data)
-            let message = decodedError?.message ?? decodedError?.errorDescription ?? "Authentication request failed."
+            let responseBody = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let statusPrefix = "Authentication failed (\(http.statusCode))"
+            let details = decodedError?.bestMessage ?? {
+                guard let responseBody, responseBody.isEmpty == false else { return nil }
+                return responseBody
+            }()
+#if DEBUG
+            print("Supabase auth request failed: method=\(method) path=\(path) status=\(http.statusCode) body=\(responseBody ?? "<empty>")")
+#endif
+            let message = details.map { "\(statusPrefix): \($0)" } ?? statusPrefix
             throw AuthError.apiError(message)
         }
 
@@ -890,10 +907,45 @@ private struct SupabaseUserResponse: Decodable {
 private struct SupabaseErrorResponse: Decodable {
     let message: String?
     let errorDescription: String?
+    let error: String?
+    let msg: String?
+    let errorCode: String?
+    let code: String?
 
     enum CodingKeys: String, CodingKey {
         case message
         case errorDescription = "error_description"
+        case error
+        case msg
+        case errorCode = "error_code"
+        case code
+    }
+
+    var bestMessage: String? {
+        let primary = [message, errorDescription, msg, error]
+            .compactMap { candidate -> String? in
+                guard let candidate else { return nil }
+                let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+            .first
+
+        let codes = [errorCode, code]
+            .compactMap { candidate -> String? in
+                guard let candidate else { return nil }
+                let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+
+        guard let primary else {
+            return codes.isEmpty ? nil : "Code: \(codes.joined(separator: ", "))"
+        }
+
+        guard codes.isEmpty == false else {
+            return primary
+        }
+
+        return "\(primary) [\(codes.joined(separator: ", "))]"
     }
 }
 

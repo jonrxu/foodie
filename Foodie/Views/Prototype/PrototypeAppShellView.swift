@@ -1429,7 +1429,7 @@ private struct PrototypeChoicePill: View {
     }
 }
 
-private struct PrototypePageBackground: View {
+struct PrototypePageBackground: View {
     var body: some View {
         ZStack {
             Color.white
