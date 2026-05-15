@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     dexcom_scope: str = "offline_access"
     dexcom_mock_oauth: bool = False
 
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+
     openai_api_key: str = ""
     openai_model: str = "gpt-5.4"
     instacart_api_key: str = ""

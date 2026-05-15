@@ -28,14 +28,14 @@ def _seed_spike(user_id: str) -> datetime:
     return start + timedelta(minutes=60)
 
 
-def test_agent_feed_prompts_for_missing_meal_log(client: TestClient) -> None:
+def test_agent_feed_prompts_for_missing_meal_log(client: TestClient, auth_headers) -> None:
     user = "agent-no-meal"
     _seed_spike(user)
 
     created = get_agent_service().process_recent_spikes(user)
     assert created == 1
 
-    feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    feed = client.get("/agent/feed", headers=auth_headers(user))
     assert feed.status_code == 200
     payload = feed.json()
     assert len(payload["runs"]) == 1
@@ -45,8 +45,9 @@ def test_agent_feed_prompts_for_missing_meal_log(client: TestClient) -> None:
     assert payload["recommendations"][0]["actionLabel"] == "Log meal"
 
 
-def test_agent_feed_uses_nearby_meal_when_available(client: TestClient) -> None:
+def test_agent_feed_uses_nearby_meal_when_available(client: TestClient, auth_headers) -> None:
     user = "agent-with-meal"
+    headers = auth_headers(user)
     meal_time = _seed_spike(user) - timedelta(minutes=30)
     meal_id = str(uuid4())
     payload = {
@@ -72,13 +73,13 @@ def test_agent_feed_uses_nearby_meal_when_available(client: TestClient) -> None:
             "suggestedSwap": "Swap sweetened yogurt for plain Greek yogurt",
         },
     }
-    created = client.post("/meals", headers={"X-User-Id": user}, json=payload)
+    created = client.post("/meals", headers=headers, json=payload)
     assert created.status_code == 200
 
     generated = get_agent_service().process_recent_spikes(user)
     assert generated == 1
 
-    feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    feed = client.get("/agent/feed", headers=headers)
     assert feed.status_code == 200
     recommendation = feed.json()["recommendations"][0]
     assert recommendation["relatedMealLogID"] == meal_id
@@ -86,7 +87,7 @@ def test_agent_feed_uses_nearby_meal_when_available(client: TestClient) -> None:
     assert recommendation["actionLabel"] == "View feedback"
 
 
-def test_agent_run_deduplicates_same_spike(client: TestClient) -> None:
+def test_agent_run_deduplicates_same_spike(client: TestClient, auth_headers) -> None:
     user = "agent-dedup"
     _seed_spike(user)
 
@@ -96,36 +97,37 @@ def test_agent_run_deduplicates_same_spike(client: TestClient) -> None:
     assert first == 1
     assert second == 0
 
-    feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    feed = client.get("/agent/feed", headers=auth_headers(user))
     assert feed.status_code == 200
     assert len(feed.json()["runs"]) == 1
 
 
-def test_agent_recommendation_read_and_dismiss_persist(client: TestClient) -> None:
+def test_agent_recommendation_read_and_dismiss_persist(client: TestClient, auth_headers) -> None:
     user = "agent-state"
+    headers = auth_headers(user)
     _seed_spike(user)
     assert get_agent_service().process_recent_spikes(user) == 1
 
-    initial_feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    initial_feed = client.get("/agent/feed", headers=headers)
     recommendation_id = initial_feed.json()["recommendations"][0]["id"]
 
-    read_response = client.post(f"/agent/recommendations/{recommendation_id}/read", headers={"X-User-Id": user})
+    read_response = client.post(f"/agent/recommendations/{recommendation_id}/read", headers=headers)
     assert read_response.status_code == 200
     assert read_response.json()["readAt"] is not None
     assert read_response.json()["dismissedAt"] is None
 
-    dismiss_response = client.post(f"/agent/recommendations/{recommendation_id}/dismiss", headers={"X-User-Id": user})
+    dismiss_response = client.post(f"/agent/recommendations/{recommendation_id}/dismiss", headers=headers)
     assert dismiss_response.status_code == 200
     assert dismiss_response.json()["readAt"] is not None
     assert dismiss_response.json()["dismissedAt"] is not None
 
-    final_feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    final_feed = client.get("/agent/feed", headers=headers)
     final_recommendation = final_feed.json()["recommendations"][0]
     assert final_recommendation["readAt"] is not None
     assert final_recommendation["dismissedAt"] is not None
 
 
-def test_daily_summary_creates_recommendation_for_notable_day(client: TestClient) -> None:
+def test_daily_summary_creates_recommendation_for_notable_day(client: TestClient, auth_headers) -> None:
     user = "agent-daily-notable"
     day = datetime.now(UTC).date() - timedelta(days=1)
     start = datetime.combine(day, datetime.min.time(), tzinfo=UTC) + timedelta(hours=8)
@@ -145,7 +147,7 @@ def test_daily_summary_creates_recommendation_for_notable_day(client: TestClient
     created = get_agent_service().process_daily_summary(user, target_date=day)
     assert created == 1
 
-    feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    feed = client.get("/agent/feed", headers=auth_headers(user))
     assert feed.status_code == 200
     payload = feed.json()
     assert payload["runs"][0]["kind"] == "daily_summary"
@@ -154,7 +156,7 @@ def test_daily_summary_creates_recommendation_for_notable_day(client: TestClient
     assert payload["recommendations"][0]["notificationDraft"]["kind"] == "daily_summary_ready"
 
 
-def test_daily_summary_skips_stable_day(client: TestClient) -> None:
+def test_daily_summary_skips_stable_day(client: TestClient, auth_headers) -> None:
     user = "agent-daily-stable"
     day = datetime.now(UTC).date() - timedelta(days=1)
     start = datetime.combine(day, datetime.min.time(), tzinfo=UTC) + timedelta(hours=8)
@@ -174,7 +176,7 @@ def test_daily_summary_skips_stable_day(client: TestClient) -> None:
     created = get_agent_service().process_daily_summary(user, target_date=day)
     assert created == 0
 
-    feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    feed = client.get("/agent/feed", headers=auth_headers(user))
     assert feed.status_code == 200
     payload = feed.json()
     assert payload["runs"][0]["kind"] == "daily_summary"
@@ -182,15 +184,17 @@ def test_daily_summary_skips_stable_day(client: TestClient) -> None:
     assert payload["recommendations"] == []
 
 
-def test_weekly_summary_creates_recommendation_and_cart(client: TestClient) -> None:
+def test_weekly_summary_creates_recommendation_and_cart(client: TestClient, auth_headers) -> None:
     user = "agent-weekly"
     get_user_store().create_user(
         StoredUser(
             id=user,
+            email=None,
             display_name="Weekly User",
             diet_preferences=["Low sodium"],
             care_goals=["Keep glucose steady"],
             support_preferences=["Weekly check-ins"],
+            has_completed_onboarding=True,
             created_at=datetime.now(UTC),
         )
     )
@@ -232,14 +236,14 @@ def test_weekly_summary_creates_recommendation_and_cart(client: TestClient) -> N
             },
         },
     }
-    created = client.post("/meals", headers={"X-User-Id": user}, json=meal_payload)
+    created = client.post("/meals", headers=auth_headers(user), json=meal_payload)
     assert created.status_code == 200
     assert get_agent_service().process_daily_summary(user, target_date=day) == 1
 
     weekly_created = get_agent_service().process_weekly_summary(user, anchor_date=datetime.now(UTC).date())
     assert weekly_created == 1
 
-    feed = client.get("/agent/feed", headers={"X-User-Id": user})
+    feed = client.get("/agent/feed", headers=auth_headers(user))
     assert feed.status_code == 200
     weekly = next(item for item in feed.json()["recommendations"] if item["runKind"] == "weekly_planning")
     assert weekly["notificationDraft"]["kind"] == "weekly_plan_ready"

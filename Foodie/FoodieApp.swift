@@ -11,6 +11,7 @@ import SwiftUI
 struct FoodieApp: App {
     @UIApplicationDelegateAdaptor(AgentNotificationAppDelegate.self) private var appDelegate
     @StateObject private var session = AppSession.shared
+    @StateObject private var authViewModel = AuthViewModel.shared
     @StateObject private var dexcomViewModel = DexcomConnectionViewModel.shared
     @StateObject private var mealFlowViewModel = PrototypeMealFlowViewModel.shared
     @StateObject private var agentFeedViewModel = AgentFeedViewModel.shared
@@ -20,15 +21,19 @@ struct FoodieApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(session)
+                .environmentObject(authViewModel)
                 .environmentObject(dexcomViewModel)
                 .environmentObject(mealFlowViewModel)
                 .environmentObject(agentFeedViewModel)
                 .environmentObject(agentNotificationRouter)
                 .preferredColorScheme(.light)
                 .task {
-                    await dexcomViewModel.bootstrapIfNeeded()
-                    await mealFlowViewModel.bootstrapIfNeeded()
-                    await agentFeedViewModel.bootstrapIfNeeded()
+                    await authViewModel.bootstrapIfNeeded()
+                    if authViewModel.isAuthenticated {
+                        await dexcomViewModel.bootstrapIfNeeded()
+                        await mealFlowViewModel.bootstrapIfNeeded()
+                        await agentFeedViewModel.bootstrapIfNeeded()
+                    }
                 }
                 .onOpenURL { url in
                     Task {

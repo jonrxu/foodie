@@ -105,6 +105,33 @@ final class AppSession: ObservableObject {
         isAuthenticating = false
     }
 
+    func syncFromBackend(displayName: String, email: String?, hasCompletedOnboarding: Bool) {
+        guard var current = profile else {
+            let freshProfile = UserProfile(
+                displayName: displayName,
+                email: email,
+                joinedDate: Date(),
+                hasCompletedOnboarding: hasCompletedOnboarding
+            )
+            profile = freshProfile
+            profileStore.save(freshProfile)
+            applyProfileToLegacyPreferences(freshProfile)
+            isOnboardingPresented = !hasCompletedOnboarding
+            return
+        }
+
+        current.displayName = displayName
+        current.email = email
+        current.hasCompletedOnboarding = hasCompletedOnboarding
+        if current.joinedDate.timeIntervalSince1970 == 0 {
+            current.joinedDate = Date()
+        }
+        profile = current
+        profileStore.save(current)
+        applyProfileToLegacyPreferences(current)
+        isOnboardingPresented = !hasCompletedOnboarding
+    }
+
     private func applyProfileToLegacyPreferences(_ profile: UserProfile) {
         preferences.dailyCalorieGoal = profile.dailyCalorieGoal ?? preferences.dailyCalorieGoal
         preferences.joinedDate = profile.joinedDate
@@ -126,5 +153,3 @@ final class AppSession: ObservableObject {
         preferencesStore.saveBudgetPreferences(budgetNotes)
     }
 }
-
-

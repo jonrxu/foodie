@@ -47,39 +47,42 @@ def _meal_payload(*, logged_at: datetime, summary: str = "Chicken and fries") ->
     }
 
 
-def _connect_and_sync(client: TestClient, user: str) -> None:
-    start = client.post("/dexcom/connect/start", headers={"X-User-Id": user})
+def _connect_and_sync(client: TestClient, user: str, auth_headers) -> None:
+    headers = auth_headers(user)
+    start = client.post("/dexcom/connect/start", headers=headers)
     state = start.json()["authorization_url"].split("state=")[1].split("&")[0]
     callback = client.get(f"/dexcom/connect/callback?state={state}&code=fake-auth-code", follow_redirects=False)
     assert callback.status_code == 302
-    sync = client.post("/dexcom/sync", headers={"X-User-Id": user})
+    sync = client.post("/dexcom/sync", headers=headers)
     assert sync.status_code == 200
 
 
-def test_create_meal_and_fetch_recent(client: TestClient) -> None:
+def test_create_meal_and_fetch_recent(client: TestClient, auth_headers) -> None:
     user = "meal-user"
+    headers = auth_headers(user)
     payload = _meal_payload(logged_at=datetime.now(UTC) - timedelta(hours=2))
 
-    created = client.post("/meals", headers={"X-User-Id": user}, json=payload)
+    created = client.post("/meals", headers=headers, json=payload)
     assert created.status_code == 200
     assert created.json()["summary"] == "Chicken and fries"
 
-    recent = client.get("/meals/recent", headers={"X-User-Id": user})
+    recent = client.get("/meals/recent", headers=headers)
     assert recent.status_code == 200
     meals = recent.json()["meals"]
     assert len(meals) == 1
     assert meals[0]["id"] == payload["id"]
 
 
-def test_meal_feedback_returns_measured_insight_when_cgm_data_exists(client: TestClient) -> None:
+def test_meal_feedback_returns_measured_insight_when_cgm_data_exists(client: TestClient, auth_headers) -> None:
     user = "meal-cgm-user"
-    _connect_and_sync(client, user)
+    headers = auth_headers(user)
+    _connect_and_sync(client, user, auth_headers)
 
     payload = _meal_payload(logged_at=datetime.now(UTC) - timedelta(hours=2))
-    created = client.post("/meals", headers={"X-User-Id": user}, json=payload)
+    created = client.post("/meals", headers=headers, json=payload)
     assert created.status_code == 200
 
-    feedback = client.get(f"/meals/{payload['id']}/feedback", headers={"X-User-Id": user})
+    feedback = client.get(f"/meals/{payload['id']}/feedback", headers=headers)
     assert feedback.status_code == 200
     insight = feedback.json()
     assert insight["feedback"]["mode"] == "measured"
@@ -88,16 +91,17 @@ def test_meal_feedback_returns_measured_insight_when_cgm_data_exists(client: Tes
     assert len(insight["suggestedCartItems"]) > 0
 
 
-def test_meal_feedback_returns_predicted_without_cgm_connection(client: TestClient) -> None:
+def test_meal_feedback_returns_predicted_without_cgm_connection(client: TestClient, auth_headers) -> None:
     user = "meal-predicted-user"
+    headers = auth_headers(user)
     payload = _meal_payload(
         logged_at=datetime.now(UTC) - timedelta(hours=2),
         summary="Burger, fries, and soda",
     )
-    created = client.post("/meals", headers={"X-User-Id": user}, json=payload)
+    created = client.post("/meals", headers=headers, json=payload)
     assert created.status_code == 200
 
-    feedback = client.get(f"/meals/{payload['id']}/feedback", headers={"X-User-Id": user})
+    feedback = client.get(f"/meals/{payload['id']}/feedback", headers=headers)
     assert feedback.status_code == 200
     insight = feedback.json()
     assert insight["feedback"]["mode"] == "predicted"
@@ -105,7 +109,7 @@ def test_meal_feedback_returns_predicted_without_cgm_connection(client: TestClie
     assert insight["spikeEvent"]["eventKind"] == "predicted"
 
 
-def test_meal_feedback_missing_meal_returns_404(client: TestClient) -> None:
-    response = client.get(f"/meals/{uuid4()}/feedback", headers={"X-User-Id": "missing-user"})
+def test_meal_feedback_missing_meal_returns_404(client: TestClient, auth_headers) -> None:
+    response = client.get(f"/meals/{uuid4()}/feedback", headers=auth_headers("missing-user"))
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "meal_not_found"

@@ -10,6 +10,7 @@ from app.persistence.glucose_store import SQLiteGlucoseStore
 from app.persistence.meal_store import SQLiteMealStore
 from app.persistence.agent_store import SQLiteAgentStore
 from app.persistence.user_store import SQLiteUserStore
+from app.services.auth_service import SupabaseAuthService
 from app.services.agent_service import AgentService
 from app.services.cart_service import CartService
 from app.services.cgm_service import CGMService
@@ -26,6 +27,11 @@ def get_user_store() -> SQLiteUserStore:
 @lru_cache(maxsize=1)
 def get_user_service() -> UserService:
     return UserService(user_store=get_user_store())
+
+
+@lru_cache(maxsize=1)
+def get_auth_service() -> SupabaseAuthService:
+    return SupabaseAuthService(settings=get_settings())
 
 
 @lru_cache(maxsize=1)

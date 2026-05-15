@@ -9,25 +9,19 @@ import SwiftUI
 
 struct PrototypeAppShellView: View {
     @EnvironmentObject private var session: AppSession
+    @EnvironmentObject private var authViewModel: AuthViewModel
 
     var body: some View {
         Group {
             if session.isOnboardingPresented {
                 PrototypeOnboardingFlowView { dietPrefs, careGoals, supports in
                     Task {
-                        // Only register a new user if no ID is stored yet.
-                        // Re-running onboarding must not orphan an existing Dexcom connection.
-                        if BackendClient.storedUserID == nil {
-                            if let response = try? await BackendClient.shared.registerUser(
-                                name: "",
-                                dietPreferences: dietPrefs,
-                                careGoals: careGoals,
-                                supportPreferences: supports
-                            ) {
-                                BackendClient.saveUserID(response.id)
-                            }
-                        }
-                        session.completeOnboarding()
+                        _ = await authViewModel.completeOnboarding(
+                            displayName: session.profile?.displayName ?? "",
+                            dietPreferences: dietPrefs,
+                            careGoals: careGoals,
+                            supportPreferences: supports
+                        )
                     }
                 }
             } else {
@@ -602,6 +596,8 @@ private struct PrototypeHomeView: View {
 }
 
 private struct PrototypeFoodLoggingTab: View {
+    @EnvironmentObject private var authViewModel: AuthViewModel
+
     let onResetToOnboarding: () -> Void
     let onShowMealsHistory: () -> Void
     let onShowAgentInbox: () -> Void
@@ -623,10 +619,6 @@ private struct PrototypeFoodLoggingTab: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Log food")
                                 .font(.system(size: 33, weight: .bold, design: .rounded))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    onResetToOnboarding()
-                                }
                             Text("Choose one simple way to log a meal")
                                 .font(.headline.weight(.semibold))
                                 .foregroundStyle(.secondary)
@@ -662,6 +654,23 @@ private struct PrototypeFoodLoggingTab: View {
                                 .clipShape(Capsule())
                             }
                             .buttonStyle(.plain)
+
+                            Menu {
+                                Button("Review onboarding") {
+                                    onResetToOnboarding()
+                                }
+                                Button("Sign out", role: .destructive) {
+                                    Task { await authViewModel.signOut() }
+                                }
+                            } label: {
+                                Image(systemName: "person.crop.circle")
+                                    .font(.title3.weight(.semibold))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 9)
+                                    .background(Color(uiColor: .tertiarySystemFill))
+                                    .foregroundStyle(.primary)
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
 

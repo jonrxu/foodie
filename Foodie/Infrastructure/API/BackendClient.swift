@@ -8,6 +8,7 @@ import Foundation
 final class BackendClient {
     enum BackendError: Error, LocalizedError {
         case notConfigured
+        case missingAuthentication
         case invalidResponse
         case badStatusCode(Int)
 
@@ -15,6 +16,8 @@ final class BackendClient {
             switch self {
             case .notConfigured:
                 return "Backend is not configured yet."
+            case .missingAuthentication:
+                return "Please sign in again to continue."
             case .invalidResponse:
                 return "Backend returned an invalid response."
             case .badStatusCode(let statusCode):
@@ -108,73 +111,91 @@ final class BackendClient {
         let dietPreferences: [String]
     }
 
-    struct RegisterUserRequest: Encodable {
+    struct UserProfileUpdateRequest: Encodable {
         let displayName: String
         let dietPreferences: [String]
         let careGoals: [String]
         let supportPreferences: [String]
+        let hasCompletedOnboarding: Bool
     }
 
-    struct RegisterUserResponse: Decodable {
+    struct CurrentUserProfileResponse: Decodable {
         let id: String
+        let email: String?
         let displayName: String
         let dietPreferences: [String]
         let careGoals: [String]
         let supportPreferences: [String]
+        let hasCompletedOnboarding: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case email
+            case displayName
+            case dietPreferences
+            case careGoals
+            case supportPreferences
+            case hasCompletedOnboarding
+        }
     }
 
     static let shared = BackendClient()
 
-    private static let userIDKeychainKey = "backend_user_id"
-
-    static func saveUserID(_ id: String) {
-        KeychainStore.shared.write(id, account: userIDKeychainKey)
-    }
-
-    static var storedUserID: String? {
-        KeychainStore.shared.read(account: userIDKeychainKey)
-    }
-
     private let environment: APIEnvironment
     private let session: URLSession
-    private let fallbackUserID: String
-
-    private var effectiveUserID: String {
-        KeychainStore.shared.read(account: Self.userIDKeychainKey) ?? fallbackUserID
-    }
 
     init(environment: APIEnvironment = .current,
-         session: URLSession = .shared,
-         defaultUserID: String = AppConfig.defaultBackendUserID) {
+         session: URLSession = .shared) {
         self.environment = environment
         self.session = session
-        self.fallbackUserID = defaultUserID
     }
 
-    func registerUser(name: String,
-                      dietPreferences: [String] = [],
-                      careGoals: [String] = [],
-                      supportPreferences: [String] = []) async throws -> RegisterUserResponse {
+    func fetchCurrentUserProfile() async throws -> CurrentUserProfileResponse {
         switch environment.mode {
         case .stub:
-            return RegisterUserResponse(
-                id: fallbackUserID,
-                displayName: name,
-                dietPreferences: dietPreferences,
-                careGoals: careGoals,
-                supportPreferences: supportPreferences
+            return CurrentUserProfileResponse(
+                id: "stub-user",
+                email: nil,
+                displayName: "",
+                dietPreferences: [],
+                careGoals: [],
+                supportPreferences: [],
+                hasCompletedOnboarding: false
             )
         case .remote(let baseURL):
-            return try await post(
-                path: "/users/register",
-                body: RegisterUserRequest(
-                    displayName: name,
+            return try await get(path: "/users/me", from: baseURL)
+        }
+    }
+
+    func updateCurrentUserProfile(
+        displayName: String,
+        dietPreferences: [String],
+        careGoals: [String],
+        supportPreferences: [String],
+        hasCompletedOnboarding: Bool
+    ) async throws -> CurrentUserProfileResponse {
+        switch environment.mode {
+        case .stub:
+            return CurrentUserProfileResponse(
+                id: "stub-user",
+                email: nil,
+                displayName: displayName,
+                dietPreferences: dietPreferences,
+                careGoals: careGoals,
+                supportPreferences: supportPreferences,
+                hasCompletedOnboarding: hasCompletedOnboarding
+            )
+        case .remote(let baseURL):
+            return try await put(
+                path: "/users/me",
+                body: UserProfileUpdateRequest(
+                    displayName: displayName,
                     dietPreferences: dietPreferences,
                     careGoals: careGoals,
-                    supportPreferences: supportPreferences
+                    supportPreferences: supportPreferences,
+                    hasCompletedOnboarding: hasCompletedOnboarding
                 ),
-                to: baseURL,
-                requiresAuth: false
+                to: baseURL
             )
         }
     }
@@ -245,7 +266,7 @@ final class BackendClient {
             }
 
             var request = URLRequest(url: url)
-            configureHeaders(for: &request)
+            try configureHeaders(for: &request)
             let (data, response) = try await session.data(for: request)
             return try decode(GlucoseReadingsEnvelope.self, from: data, response: response).readings
         }
@@ -299,7 +320,7 @@ final class BackendClient {
             }
 
             var request = URLRequest(url: url)
-            configureHeaders(for: &request)
+            try configureHeaders(for: &request)
             let (data, response) = try await session.data(for: request)
             return try decode(RecentMealsResponse.self, from: data, response: response).meals
         }
@@ -368,7 +389,7 @@ final class BackendClient {
             }
 
             var request = URLRequest(url: url)
-            configureHeaders(for: &request)
+            try configureHeaders(for: &request)
             let (data, response) = try await session.data(for: request)
             let decoded = try decode(AgentFeedResponse.self, from: data, response: response)
             return AgentFeed(runs: decoded.runs, recommendations: decoded.recommendations)
@@ -465,7 +486,7 @@ final class BackendClient {
             components?.queryItems = [URLQueryItem(name: "code", value: code)]
             guard let url = components?.url else { throw BackendError.invalidResponse }
             var request = URLRequest(url: url)
-            configureHeaders(for: &request)
+            try configureHeaders(for: &request)
             let (data, response) = try await session.data(for: request)
             return try decode(LookupBarcodeResponse.self, from: data, response: response).summary
         }
@@ -529,7 +550,7 @@ final class BackendClient {
     private func get<Response: Decodable>(path: String, from baseURL: URL) async throws -> Response {
         let url = baseURL.appending(path: path)
         var request = URLRequest(url: url)
-        configureHeaders(for: &request)
+        try configureHeaders(for: &request)
         let (data, response) = try await session.data(for: request)
         return try decode(Response.self, from: data, response: response)
     }
@@ -542,7 +563,7 @@ final class BackendClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if requiresAuth { configureHeaders(for: &request) }
+        if requiresAuth { try configureHeaders(for: &request) }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601WithFallback
         request.httpBody = try encoder.encode(body)
@@ -550,8 +571,27 @@ final class BackendClient {
         return try decode(Response.self, from: data, response: response)
     }
 
-    private func configureHeaders(for request: inout URLRequest) {
-        request.setValue(effectiveUserID, forHTTPHeaderField: "X-User-Id")
+    private func put<Body: Encodable, Response: Decodable>(path: String,
+                                                           body: Body,
+                                                           to baseURL: URL,
+                                                           requiresAuth: Bool = true) async throws -> Response {
+        let url = baseURL.appending(path: path)
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if requiresAuth { try configureHeaders(for: &request) }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601WithFallback
+        request.httpBody = try encoder.encode(body)
+        let (data, response) = try await session.data(for: request)
+        return try decode(Response.self, from: data, response: response)
+    }
+
+    private func configureHeaders(for request: inout URLRequest) throws {
+        guard let accessToken = AuthSessionStore.shared.load()?.accessToken, accessToken.isEmpty == false else {
+            throw BackendError.missingAuthentication
+        }
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
     }
 
     private func decode<Response: Decodable>(_ type: Response.Type, from data: Data, response: URLResponse) throws -> Response {
@@ -585,4 +625,278 @@ private struct DexcomSyncEnvelope: Codable {
 
 private struct GlucoseReadingsEnvelope: Codable {
     let readings: [GlucoseReading]
+}
+
+struct AuthSession: Codable, Equatable {
+    let accessToken: String
+    let refreshToken: String
+    let expiresAt: Date?
+    let userID: String
+    let email: String?
+
+    var isExpired: Bool {
+        guard let expiresAt else { return false }
+        return expiresAt <= Date().addingTimeInterval(30)
+    }
+}
+
+enum AuthSignUpResult: Equatable {
+    case authenticated(AuthSession)
+    case emailVerificationRequired
+}
+
+final class AuthSessionStore {
+    static let shared = AuthSessionStore()
+
+    private let keychainAccount = "supabase_auth_session"
+
+    func load() -> AuthSession? {
+        guard let raw = KeychainStore.shared.read(account: keychainAccount),
+              let data = raw.data(using: .utf8) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(AuthSession.self, from: data)
+    }
+
+    func save(_ authSession: AuthSession) {
+        guard let data = try? JSONEncoder().encode(authSession),
+              let raw = String(data: data, encoding: .utf8) else {
+            return
+        }
+        _ = KeychainStore.shared.write(raw, account: keychainAccount)
+    }
+
+    func clear() {
+        _ = KeychainStore.shared.delete(account: keychainAccount)
+    }
+}
+
+final class SupabaseAuthClient {
+    enum AuthError: Error, LocalizedError {
+        case notConfigured
+        case invalidResponse
+        case apiError(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .notConfigured:
+                return "Authentication is not configured yet."
+            case .invalidResponse:
+                return "Authentication provider returned an invalid response."
+            case .apiError(let message):
+                return message
+            }
+        }
+    }
+
+    static let shared = SupabaseAuthClient()
+
+    private let session: URLSession
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
+
+    func signUp(name: String, email: String, password: String) async throws -> AuthSignUpResult {
+        let response: SupabaseAuthResponse = try await request(
+            path: "/auth/v1/signup",
+            method: "POST",
+            body: SupabaseSignUpRequest(
+                email: email,
+                password: password,
+                data: SupabaseUserMetadata(displayName: name)
+            )
+        )
+
+        if let authSession = response.authSession {
+            AuthSessionStore.shared.save(authSession)
+            return .authenticated(authSession)
+        }
+
+        return .emailVerificationRequired
+    }
+
+    func signIn(email: String, password: String) async throws -> AuthSession {
+        let response: SupabaseAuthResponse = try await request(
+            path: "/auth/v1/token?grant_type=password",
+            method: "POST",
+            body: SupabasePasswordSignInRequest(email: email, password: password)
+        )
+        guard let authSession = response.authSession else {
+            throw AuthError.invalidResponse
+        }
+        AuthSessionStore.shared.save(authSession)
+        return authSession
+    }
+
+    func restoreSession() async throws -> AuthSession? {
+        guard let stored = AuthSessionStore.shared.load() else { return nil }
+        if stored.isExpired {
+            return try await refreshSession(refreshToken: stored.refreshToken)
+        }
+        return try await fetchCurrentUser(session: stored)
+    }
+
+    func refreshSession(refreshToken: String) async throws -> AuthSession {
+        let response: SupabaseAuthResponse = try await request(
+            path: "/auth/v1/token?grant_type=refresh_token",
+            method: "POST",
+            body: SupabaseRefreshTokenRequest(refreshToken: refreshToken)
+        )
+        guard let authSession = response.authSession else {
+            throw AuthError.invalidResponse
+        }
+        AuthSessionStore.shared.save(authSession)
+        return authSession
+    }
+
+    func fetchCurrentUser(session authSession: AuthSession) async throws -> AuthSession {
+        let response: SupabaseUserResponse = try await request(
+            path: "/auth/v1/user",
+            method: "GET",
+            body: Optional<String>.none,
+            accessToken: authSession.accessToken
+        )
+        let updated = AuthSession(
+            accessToken: authSession.accessToken,
+            refreshToken: authSession.refreshToken,
+            expiresAt: authSession.expiresAt,
+            userID: response.id,
+            email: response.email
+        )
+        AuthSessionStore.shared.save(updated)
+        return updated
+    }
+
+    func signOut() async {
+        if let stored = AuthSessionStore.shared.load() {
+            _ = try? await request(
+                path: "/auth/v1/logout",
+                method: "POST",
+                body: Optional<String>.none,
+                accessToken: stored.accessToken
+            ) as SupabaseLogoutResponse
+        }
+        AuthSessionStore.shared.clear()
+    }
+
+    private func request<Request: Encodable, Response: Decodable>(
+        path: String,
+        method: String,
+        body: Request?,
+        accessToken: String? = nil
+    ) async throws -> Response {
+        guard let baseURLString = AppConfig.supabaseURL,
+              let baseURL = URL(string: baseURLString),
+              let publishableKey = AppConfig.supabasePublishableKey,
+              publishableKey.isEmpty == false else {
+            throw AuthError.notConfigured
+        }
+
+        let url = baseURL.appending(path: path)
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+        if let accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        if let body {
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AuthError.invalidResponse
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let decodedError = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data)
+            let message = decodedError?.message ?? decodedError?.errorDescription ?? "Authentication request failed."
+            throw AuthError.apiError(message)
+        }
+
+        if Response.self == SupabaseLogoutResponse.self, let empty = SupabaseLogoutResponse() as? Response {
+            return empty
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601WithFallback
+        guard let decoded = try? decoder.decode(Response.self, from: data) else {
+            throw AuthError.invalidResponse
+        }
+        return decoded
+    }
+}
+
+private struct SupabaseSignUpRequest: Encodable {
+    let email: String
+    let password: String
+    let data: SupabaseUserMetadata
+}
+
+private struct SupabasePasswordSignInRequest: Encodable {
+    let email: String
+    let password: String
+}
+
+private struct SupabaseRefreshTokenRequest: Encodable {
+    let refreshToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case refreshToken = "refresh_token"
+    }
+}
+
+private struct SupabaseUserMetadata: Encodable {
+    let displayName: String
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+    }
+}
+
+private struct SupabaseAuthResponse: Decodable {
+    let accessToken: String?
+    let refreshToken: String?
+    let expiresAtEpoch: TimeInterval?
+    let user: SupabaseUserResponse?
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case refreshToken = "refresh_token"
+        case expiresAtEpoch = "expires_at"
+        case user
+    }
+
+    var authSession: AuthSession? {
+        guard let accessToken, let refreshToken else {
+            return nil
+        }
+        return AuthSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: expiresAtEpoch.map(Date.init(timeIntervalSince1970:)),
+            userID: user?.id ?? "",
+            email: user?.email
+        )
+    }
+}
+
+private struct SupabaseUserResponse: Decodable {
+    let id: String
+    let email: String?
+}
+
+private struct SupabaseErrorResponse: Decodable {
+    let message: String?
+    let errorDescription: String?
+
+    enum CodingKeys: String, CodingKey {
+        case message
+        case errorDescription = "error_description"
+    }
+}
+
+private struct SupabaseLogoutResponse: Decodable {
+    init() {}
 }

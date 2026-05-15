@@ -33,20 +33,23 @@ uvicorn app.main:app --reload --port 8000
 ## Example flow
 
 ```bash
+# Set a Supabase access token first
+export SUPABASE_JWT="paste-user-access-token-here"
+
 # 1) start Dexcom connection
-curl -s -X POST http://localhost:8000/dexcom/connect/start | jq
+curl -s -X POST -H "Authorization: Bearer $SUPABASE_JWT" http://localhost:8000/dexcom/connect/start | jq
 
 # 2) check status for a user
-curl -s -H 'X-User-Id: demo-user' http://localhost:8000/dexcom/connect/status | jq
+curl -s -H "Authorization: Bearer $SUPABASE_JWT" http://localhost:8000/dexcom/connect/status | jq
 
 # 3) mock complete (temporary)
-curl -s -X POST -H 'X-User-Id: demo-user' http://localhost:8000/dexcom/connect/mock-complete | jq
+curl -s -X POST -H "Authorization: Bearer $SUPABASE_JWT" http://localhost:8000/dexcom/connect/mock-complete | jq
 
 # 4) trigger sync
-curl -s -X POST -H 'X-User-Id: demo-user' http://localhost:8000/dexcom/sync | jq
+curl -s -X POST -H "Authorization: Bearer $SUPABASE_JWT" http://localhost:8000/dexcom/sync | jq
 
 # 5) disconnect
-curl -s -X POST -H 'X-User-Id: demo-user' http://localhost:8000/dexcom/disconnect | jq
+curl -s -X POST -H "Authorization: Bearer $SUPABASE_JWT" http://localhost:8000/dexcom/disconnect | jq
 ```
 
 ## Notes
