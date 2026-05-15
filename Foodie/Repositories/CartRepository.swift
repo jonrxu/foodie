@@ -9,6 +9,7 @@ protocol CartRepository {
     func fetchAllDrafts() async throws -> [CartDraft]
     func saveDraft(_ draft: CartDraft) async throws
     func deleteDraft(id: UUID) async throws
+    func clearDrafts() async throws
 }
 
 extension CartRepository {
@@ -37,5 +38,9 @@ final class LocalCartRepository: CartRepository {
     func deleteDraft(id: UUID) async throws {
         let drafts = try await fetchAllDrafts().filter { $0.id != id }
         storage.save(drafts)
+    }
+
+    func clearDrafts() async throws {
+        try storage.clear()
     }
 }

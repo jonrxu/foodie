@@ -18,6 +18,7 @@ struct PrototypeShoppingCartView: View {
     @State private var cartScrollOffset: CGFloat = 0
     @State private var cartContentHeight: CGFloat = 0
     @State private var cartViewportHeight: CGFloat = 0
+    @State private var isMutatingCart = false
 
     init(hideTabBar: Bool = true) {
         self.hideTabBar = hideTabBar
@@ -85,13 +86,36 @@ struct PrototypeShoppingCartView: View {
                     Text("Items")
                         .font(.headline.weight(.semibold))
                     Spacer()
-                    Label("Customize", systemImage: "square.and.pencil")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppTheme.primary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(AppTheme.primary.opacity(0.12))
-                        .clipShape(Capsule())
+                    Menu {
+                        if hasActiveCartItems {
+                            Button("Reduce to 20 items") {
+                                reduceCart(to: 20)
+                            }
+
+                            Button("Reduce to 10 items") {
+                                reduceCart(to: 10)
+                            }
+
+                            Button("Reduce to 5 items") {
+                                reduceCart(to: 5)
+                            }
+
+                            Button("Clear cart", role: .destructive) {
+                                clearCart()
+                            }
+                        } else {
+                            Text("No saved cart")
+                        }
+                    } label: {
+                        Label("Actions", systemImage: "ellipsis.circle")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(AppTheme.primary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(AppTheme.primary.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    .disabled(isMutatingCart)
                 }
                 .padding(.bottom, 10)
 
@@ -295,6 +319,32 @@ struct PrototypeShoppingCartView: View {
             return ("🥤", .blue)
         }
         return ("🛒", .indigo)
+    }
+
+    private var hasActiveCartItems: Bool {
+        mealFlowViewModel.activeCartDraft?.items.isEmpty == false
+    }
+
+    private func clearCart() {
+        Task {
+            guard !isMutatingCart else { return }
+            await MainActor.run { isMutatingCart = true }
+            defer {
+                Task { await MainActor.run { isMutatingCart = false } }
+            }
+            _ = await mealFlowViewModel.clearActiveCart()
+        }
+    }
+
+    private func reduceCart(to limit: Int) {
+        Task {
+            guard !isMutatingCart else { return }
+            await MainActor.run { isMutatingCart = true }
+            defer {
+                Task { await MainActor.run { isMutatingCart = false } }
+            }
+            _ = await mealFlowViewModel.reduceActiveCart(to: limit)
+        }
     }
 
     private var pageBackground: some View {

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
@@ -14,6 +15,9 @@ from app.schemas.dexcom import (
     DexcomDisconnectResponse,
     DexcomSyncResponse,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -234,6 +238,7 @@ class DexcomService:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
+            self._log_token_exchange_failure(exc)
             raise AppError(
                 code="dexcom_token_exchange_failed",
                 message="Dexcom token exchange failed",
@@ -295,6 +300,7 @@ class DexcomService:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
+            self._log_token_refresh_failure(exc)
             record.status = "error"
             record.error_message = "Dexcom token refresh failed. Please reconnect Dexcom."
             self.store.save(user_id, record)
@@ -334,3 +340,41 @@ class DexcomService:
             self.settings.dexcom_client_id == "replace-me"
             or self.settings.dexcom_client_secret == "replace-me"
         )
+
+    def _log_token_exchange_failure(self, exc: httpx.HTTPError) -> None:
+        self._log_token_failure("Dexcom authorization code exchange failed", exc)
+
+    def _log_token_refresh_failure(self, exc: httpx.HTTPError) -> None:
+        self._log_token_failure("Dexcom refresh token exchange failed", exc)
+
+    def _log_token_failure(self, message: str, exc: httpx.HTTPError) -> None:
+        if isinstance(exc, httpx.HTTPStatusError):
+            logger.warning(
+                "%s: status=%s response=%s token_url=%s redirect_uri=%s client_id=%s",
+                message,
+                exc.response.status_code,
+                self._safe_response_text(exc.response),
+                self.settings.dexcom_token_url,
+                self.settings.dexcom_redirect_uri,
+                self._safe_client_id(),
+            )
+            return
+
+        logger.warning(
+            "%s: error=%s token_url=%s redirect_uri=%s client_id=%s",
+            message,
+            str(exc),
+            self.settings.dexcom_token_url,
+            self.settings.dexcom_redirect_uri,
+            self._safe_client_id(),
+        )
+
+    @staticmethod
+    def _safe_response_text(response: httpx.Response) -> str:
+        return response.text[:1200]
+
+    def _safe_client_id(self) -> str:
+        client_id = self.settings.dexcom_client_id
+        if len(client_id) <= 8:
+            return "***"
+        return f"{client_id[:4]}...{client_id[-4:]}"
