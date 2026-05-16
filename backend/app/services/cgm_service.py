@@ -49,7 +49,8 @@ class CGMService:
             return SyncResult(synced_count=0, synced_at=now)
 
         end = data_range.egvs.end
-        if record.last_sync_at:
+        has_local_readings = self.glucose_store.has_readings(user_id)
+        if record.last_sync_at and has_local_readings:
             start = max(data_range.egvs.start, record.last_sync_at - timedelta(minutes=15))
         else:
             start = max(data_range.egvs.start, end - timedelta(days=7))
@@ -68,7 +69,8 @@ class CGMService:
         self.glucose_store.upsert_readings(user_id, stored)
 
         synced_at = datetime.now(UTC)
-        record.last_sync_at = synced_at
+        if egvs:
+            record.last_sync_at = max(reading.timestamp for reading in egvs)
         self.dexcom_service.store.save(user_id, record)
         return SyncResult(synced_count=len(stored), synced_at=synced_at)
 

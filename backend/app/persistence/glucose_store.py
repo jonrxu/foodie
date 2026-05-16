@@ -78,6 +78,19 @@ class SQLiteGlucoseStore:
             ).fetchall()
         return [self._row_to_reading(row) for row in rows]
 
+    def has_readings(self, user_id: str) -> bool:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT 1
+                FROM glucose_readings
+                WHERE user_id = ?
+                LIMIT 1
+                """,
+                (user_id,),
+            ).fetchone()
+        return row is not None
+
     def _initialize(self) -> None:
         with self._lock, self._connect() as connection:
             connection.execute(
