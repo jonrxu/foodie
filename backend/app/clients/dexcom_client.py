@@ -71,7 +71,10 @@ class DexcomApiClient:
             },
         )
         payload = response.json()
-        egvs_payload = payload.get("egvs", [])
+        egvs_payload = payload.get("records")
+        if egvs_payload is None:
+            # Some older mock payloads used "egvs"; production Dexcom v3 uses "records".
+            egvs_payload = payload.get("egvs", [])
 
         readings: list[DexcomEGVReading] = []
         for item in egvs_payload:
@@ -83,7 +86,7 @@ class DexcomApiClient:
             if value is None:
                 continue
 
-            record_id = item.get("realtimeValue") or system_time
+            record_id = item.get("recordId") or item.get("realtimeValue") or system_time
             readings.append(
                 DexcomEGVReading(
                     timestamp=self._parse_dexcom_datetime(system_time),
