@@ -21,13 +21,13 @@ enum GlucoseTrend: String, Codable, CaseIterable, Hashable {
 }
 
 struct GlucoseReading: Identifiable, Codable, Hashable {
-    let id: UUID
+    let id: String
     var timestamp: Date
     var valueMgdl: Int
     var source: GlucoseSource
     var trend: GlucoseTrend?
 
-    init(id: UUID = UUID(),
+    init(id: String = UUID().uuidString,
          timestamp: Date,
          valueMgdl: Int,
          source: GlucoseSource,

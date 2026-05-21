@@ -492,6 +492,8 @@ private struct PrototypeHomeView: View {
                     .tag(HomeTab.cart)
             }
             .tint(AppTheme.primary)
+            .toolbarBackground(.visible, for: .tabBar)
+            .toolbarBackground(Color.white, for: .tabBar)
             .toolbar(.hidden, for: .navigationBar)
             .navigationBarBackButtonHidden(true)
             .task {
